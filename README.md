@@ -35,3 +35,40 @@ The **package.json** file includes the following dependencies:
     * [erlpack](https://github.com/hammerandchisel/erlpack) for much faster websockets
 * [pm2](http://pm2.keymetrics.io/docs/usage/quick-start/#cheat-sheet) for monitoring and maintaining uptime
 
+
+## Configuration
+1. Create your Discord Bot at https://discordapp.com/developers/applications/me (keep this tab open so you can easily access Client ID and Client Secret)
+2. Calculated the desired permissions for your bot at https://discordapi.com/permissions.html (or use the default 536889344)
+3. Authorize your Discord Bot for your server using `https://discordapp.com/oauth2/authorize?client_id={YOUR_CLIENT_ID}&scope=bot&permissions={YOUR_CALCULATED_PERMISSIONS}`
+4. In your local bot repo, rename the dev/require/config-dummy.json to dev/require/config.json
+2. Fill in the data as follows:
+```json
+{
+  
+  "bot": {
+    "name": "GitLab Webhook Bot",
+    "id": "THE 'Client ID' CREATED AT https://discordapp.com/developers/applications/me",
+    "token": "THE 'Client Secret' CREATED AT https://discordapp.com/developers/applications/me"
+  },
+  
+  "guild": {
+    "id": "RIGHT-CLICK YOUR SERVER/GUILD NAME IN DISCORD AND SELECT 'Copy ID' THEN PASTE HERE"
+  },
+  
+  "webhook" {
+    "discord": {
+      "id": "{ID} FROM https://discordapp.com/api/webhooks/{ID}/{TOKEN} WHICH IS GENEREATED WHEN YOU CREATE A WEBHOOK IN DISCORD",
+      "token": "{TOKEN} FROM https://discordapp.com/api/webhooks/{ID}/{TOKEN} (USE THIS FOR GITLAB'S SECRET TOKEN BOX)"
+    },
+    "source": {
+      "url": "YOUR GITLAB REPO"
+    },
+    "server": {
+      "address": "localhost",
+      "port": "8000"
+    }
+  }
+
+}
+
+```

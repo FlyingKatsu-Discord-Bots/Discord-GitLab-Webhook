@@ -1,0 +1,27 @@
+{
+  
+  "bot": {
+    "name": "GitLab Webhook Bot",
+    "id": "",
+    "token": ""
+  },
+  
+  "guild": {
+    "id": "000000000000000000"
+  },
+  
+  "webhook" {
+    "discord": {
+      "id": "000000000000000000",
+      "token": ""
+    },
+    "source": {
+      "url": ""
+    },
+    "server": {
+      "address": "localhost",
+      "port": "8000"
+    }
+  }
+
+}
