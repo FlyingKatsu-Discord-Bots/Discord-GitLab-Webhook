@@ -1,0 +1,8 @@
+# Node Dependencies
+node_modules/**
+
+# Production config files (used for testing, but containing sensitive info)
+**/require/config/**
+
+# Past versions of the dev directory
+v_*.*.*/**
