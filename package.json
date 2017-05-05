@@ -1,0 +1,24 @@
+{
+  "name": "Discord-GitLab-Webhook",
+  "version": "0.1.0",
+  "description": "A Discord bot for using webhooks with GitLab (and extendable for other custom webhooks not yet built into Discord).",
+  "main": "dev/bot.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Warped2713/Discord-GitLab-Webhook.git"
+  },
+  "author": "FlyingKatsu",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Warped2713/Discord-GitLab-Webhook/issues"
+  },
+  "homepage": "https://github.com/Warped2713/Discord-GitLab-Webhook#readme",
+  "dependencies": {
+    "discord.js": "^11.0.0",
+    "erlpack": "github:hammerandchisel/erlpack#master",
+    "pm2": "^2.4.5"
+  }
+}
