@@ -2,7 +2,7 @@
 node_modules/**
 
 # Production config files (used for testing, but containing sensitive info)
-**/require/config.json
+require/config.json
 
 # Past versions of the dev directory
 v_*.*.*/**
