@@ -3,7 +3,8 @@
   "bot": {
     "name": "GitLab Webhook Bot",
     "id": "",
-    "token": ""
+    "token": "",
+    "prefix": ">"
   },
   
   "guild": {

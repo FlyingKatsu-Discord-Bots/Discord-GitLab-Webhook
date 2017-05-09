@@ -49,7 +49,8 @@ The **package.json** file includes the following dependencies:
   "bot": {
     "name": "GitLab Webhook Bot",
     "id": "THE 'Client ID' CREATED AT https://discordapp.com/developers/applications/me",
-    "token": "THE 'Client Secret' CREATED AT https://discordapp.com/developers/applications/me"
+    "token": "THE 'Client Secret' CREATED AT https://discordapp.com/developers/applications/me",
+    "prefix": "YOUR CHOSEN COMMAND PREFIX"
   },
   
   "guild": {

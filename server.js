@@ -595,11 +595,11 @@ CLIENT.on('ready', () => {
 
 // Create an event listener for messages
 CLIENT.on('message', msg => {
-  // Only read message if it starts with delimiter
-  if (msg.content.startsWith(CONFIG.bot.delimiter)) {
+  // Only read message if it starts with command prefix
+  if (msg.content.startsWith(CONFIG.bot.prefix)) {
     
     // Parse cmd and args
-    let [cmd, ...arg] = msg.content.substring(CONFIG.bot.delimiter.length).toLowerCase().split(" ");
+    let [cmd, ...arg] = msg.content.substring(CONFIG.bot.prefix.length).toLowerCase().split(" ");
     
     // Only process command if it is recognized
     if ( COMMANDS.hasOwnProperty(cmd) ) {
