@@ -6,6 +6,8 @@
  * cat sample/unrelated.json | curl -i -v -X POST localhost:9000 -H "Content-Type: application/json" -H 'X-Gitlab-Token: TOKEN' -H 'X-Gitlab-Event: EVENT' --data-binary "@-"
  */
 
+// Import FS for reading sample files
+const FS = require('fs');
 // Import the CRYPTO module for verifying tokens from HTTP request headers
 const CRYPTO = require('crypto');
 // Import the HTTP module for sending and receiving data
@@ -434,10 +436,11 @@ function sendData(input) {
     timestamp: new Date()
   };
   
-  /*HOOK.send({embed: embed})
-      .then( (message) => console.log(`Sent message: ${message.content}`))
-      .catch(console.log);*/
-  console.log(embed);
+  HOOK.send("", {embed: embed})
+      .then( (message) => console.log(`Sent embed`))
+      .catch(console.log);
+  
+  //console.log(embed);
 }
 
 
@@ -468,6 +471,88 @@ MyError.prototype.constructor = MyError;
   //return false;
 //}
 
+
+/* ============================================
+ * Bot Commands
+ * ========================================= */
+const SAMPLE = {
+  build: {type: "Build Hook", filename: "sample/build.json"},
+  issue: {type: "Issue Hook", filename: "sample/issue.json"},
+  merge: {type: "Merge Request Hook", filename: "sample/merge.json"},
+  merge_request: SAMPLE.merge,
+  commit_comment: {type: "Note Hook", filename: "sample/note-commit.json"},
+  issue_comment: {type: "Note Hook", filename: "sample/note-issue.json"},
+  merge_comment: {type: "Note Hook", filename: "sample/note-merge.json"},
+  snippet: {type: "Note Hook", filename: "sample/note-snippet.json"},
+  pipeline: {type: "Pipeline Hook", filename: "sample/pipeline.json"},
+  push: {type: "Push Hook", filename: "sample/push.json"},
+  tag: {type: "Tag Push Hook", filename: "sample/tag.json"},
+  wiki: {type: "Wiki Hook", filename: "sample/wiki.json"},
+  unrelated: {type: "", filename: "sample/unrelated.json"}
+};
+
+
+const COMMANDS = {
+  
+  embed: function(msg, arg) {
+    if ( SAMPLE.hasOwnProperty(arg) ) {      
+      FS.readFile(SAMPLE.arg.filename, 'utf8', function (err, data) {
+        if (err) {
+          console.error(err);
+          msg.channel.send(`There was a problem loading the sample data: ${arg}`).catch(console.log);
+        } else {
+          msg.channel.send(`Sending a sample embed: ${arg}`).catch(console.log);
+          processData(SAMPLE.arg.type, JSON.parse(data));
+        }        
+      });      
+    } else {
+      msg.channel.send(`Not a recognized argument`).catch(console.log);
+    }    
+  },
+  
+  ping: function(msg) {
+    msg.channel.send('pong').catch(console.log);
+  },
+  
+  test: function(msg) {
+    msg.channel.send('Sending a sample embed').catch(console.log);
+    
+    let embed = {
+      color: 3447003,
+      author: {
+        name: CLIENT.user.username,
+        icon_url: CLIENT.user.avatarURL
+      },
+      title: 'This is an embed',
+      url: 'http://google.com',
+      description: `[abcdef](http://google.com "A title") A commit message... -Warped2713`,
+      fields: [
+        {
+          name: 'Fields',
+          value: 'They can have different fields with small headlines.'
+        },
+        {
+          name: 'Masked links',
+          value: 'You can put [masked links](http://google.com) inside of rich embeds.'
+        },
+        {
+          name: 'Markdown',
+          value: 'You can put all the *usual* **__Markdown__** inside of them.'
+        }
+      ],
+      timestamp: new Date(),
+      footer: {
+        icon_url: CLIENT.user.avatarURL,
+        text: '© Example'
+      }
+    };
+
+    HOOK.send("", {embeds: [embed]})
+      .then( (message) => console.log(`Sent test embed`))
+      .catch(console.log);
+  }
+  
+};
 
 /* ============================================
  * Discord.JS Event Handlers
@@ -504,40 +589,6 @@ CLIENT.on('ready', () => {
     }
     
   }
-  
-  let embed = {
-    color: 3447003,
-    author: {
-      name: CLIENT.user.username,
-      icon_url: CLIENT.user.avatarURL
-    },
-    title: 'This is an embed',
-    url: 'http://google.com',
-    description: `[abcdef](http://google.com "A title") A commit message... -Warped2713`,
-    fields: [
-      {
-        name: 'Fields',
-        value: 'They can have different fields with small headlines.'
-      },
-      {
-        name: 'Masked links',
-        value: 'You can put [masked links](http://google.com) inside of rich embeds.'
-      },
-      {
-        name: 'Markdown',
-        value: 'You can put all the *usual* **__Markdown__** inside of them.'
-      }
-    ],
-    timestamp: new Date(),
-    footer: {
-      icon_url: CLIENT.user.avatarURL,
-      text: '© Example'
-    }
-  };
-  
-  HOOK.send("", {embeds: [embed]})
-      .then( (message) => console.log(`Sent message: ${message.content}`))
-      .catch(console.log);
   
 });
 
