@@ -609,14 +609,14 @@ CLIENT.on('disconnect', closeEvent => {
     console.log( CONFIG.bot.name + ' went offline with code ' + closeEvent.code + ": " + closeEvent.reason);
     console.log("Exiting...");
   } else {
-    console.log('Mr.Prog went offline with unknown code');
+    console.log(`${CONFIG.bot.name} went offline with unknown code`);
   }
 });
 
 CLIENT.on('reconnecting', () => {
   let d = new Date();
   console.log(d.toLocaleString());
-  console.log('Mr.Prog is attempting to reconnect');
+  console.log(`${CONFIG.bot.name} is attempting to reconnect`);
 });
 
 CLIENT.on('warn', warn => {
