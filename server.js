@@ -61,13 +61,6 @@ const HOOK = new DISCORD.WebhookClient(CONFIG.webhook.id, CONFIG.webhook.token);
 // Create our local webhook-receiving server
 var app = HTTP.createServer(handler);
 var statusCode = 200;
-app.listen(
-  CONFIG.webhook.server.port, 
-  CONFIG.webhook.server.address,
-  () => { 
-    console.log( "Ready to listen at ", app.address() );
-    readyToReceive = true;
-  });
 
 // Handler for receiving HTTP requests
 function handler (req, res) {
@@ -491,15 +484,26 @@ CLIENT.on('ready', () => {
       .then( (message) => console.log(`Sent message: ${message.content}`))
       .catch(console.log);
   } else {
+    
     HOOK.send(readyMsg)
       .then( (message) => console.log(`Sent message: ${message.content}`))
       .catch(console.log);
+    
+    if (!app.listening) {
+      // Start listening for HTTP requests
+      app.listen(
+        CONFIG.webhook.server.port, 
+        CONFIG.webhook.server.address,
+        () => { 
+          console.log( "Ready to listen at ", app.address() );
+          readyToReceive = true;
+          HOOK.send("Ready to listen for HTTP requests")
+            .then( (message) => console.log(`Sent message: ${message.content}`))
+            .catch(console.log);
+        });
+    }
+    
   }
-  
-  /*CLIENT.fetchWebhook(CONFIG.webhook.id, CONFIG.webhook.token)
-    .then( (webhook) => webhook.sendMessage(readyMsg) )
-    .catch( console.error );
-  */
   
   let embed = {
     color: 3447003,
