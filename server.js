@@ -3,16 +3,60 @@
  * https://blog.kyletolle.com/using-node-js-to-inspect-webhook-calls/
  * Test it in a second client with cURL
  * curl -X POST localhost:9000 -H 'Content-Type: application/json' -d '{"payload":"test"}'
- * curl -i -X POST localhost:9000 -H "Content-Type: application/json" --data-binary "test.json"
+ * cat sample/unrelated.json | curl -i -v -X POST localhost:9000 -H "Content-Type: application/json" -H 'X-Gitlab-Token: TOKEN' -H 'X-Gitlab-Event: EVENT' --data-binary "@-"
  */
 
 // Import the CRYPTO module for verifying tokens from HTTP request headers
 const CRYPTO = require('crypto');
 // Import the HTTP module for sending and receiving data
 const HTTP = require('http');
+// Import the discord.js module
+const DISCORD = require('discord.js');
+
 // Import CONFIG file
 const CONFIG = require('./require/config.json');
 const SECRET = CONFIG.webhook.token || process.env.GITLAB_TOKEN || "";
+
+/* ============================================
+ * Set up states and timers
+ * ========================================= */
+var readyToReceive = false;
+
+/* ============================================
+ * Timer to check if disconnected from Discord
+ * ========================================= */
+var disconnectHandled = false;
+var readyMsg = `${CONFIG.bot.name} is online and ready to receive data`;
+
+var checkDisconnect = function() {
+  //console.log("### Routine check client.status: " + CLIENT.status + "; uptime: " + CLIENT.uptime);
+  // if connection is lost, 
+  if ( !disconnectHandled && CLIENT.status == 5 ) {
+    // set disconnectHandled
+    disconnectHandled = true;
+    // set ready message to "Recovering from unexpected shutdown"
+    readyMsg = `${CONFIG.bot.name} has been restarted.  Any unprocessed data sent before this message will need to be resubmitted.`;
+    // try to login again (when ready, set interval again) 
+    CLIENT.login(CONFIG.bot.token);
+  }
+}
+
+// Set a timeout for 120000 or 2 minutes  OR 3000 for 3sec
+var interval_dc = setInterval( checkDisconnect, 3000 );
+
+/* ============================================
+ * Set up Webhook stuff
+ * ========================================= */
+
+// Create an instance of a Discord client
+const CLIENT = new DISCORD.Client();
+
+const HOOK = new DISCORD.WebhookClient(CONFIG.webhook.id, CONFIG.webhook.token);
+
+
+/* ============================================
+ * Set up Server listening stuff
+ * ========================================= */
 
 // Create our local webhook-receiving server
 var app = HTTP.createServer(handler);
@@ -22,6 +66,7 @@ app.listen(
   CONFIG.webhook.server.address,
   () => { 
     console.log( "Ready to listen at ", app.address() );
+    readyToReceive = true;
   });
 
 // Handler for receiving HTTP requests
@@ -431,3 +476,116 @@ MyError.prototype.constructor = MyError;
 //}
 
 
+/* ============================================
+ * Discord.JS Event Handlers
+ * ========================================= */
+
+// The ready event is vital, it means that your bot will only start reacting to information
+// from Discord _after_ ready is emitted
+CLIENT.on('ready', () => {
+  console.log(`${CONFIG.bot.name} is ready to receive data`);
+  
+  if (disconnectHandled) {
+    disconnectHandled = false;
+    HOOK.send(readyMsg)
+      .then( (message) => console.log(`Sent message: ${message.content}`))
+      .catch(console.log);
+  } else {
+    HOOK.send(readyMsg)
+      .then( (message) => console.log(`Sent message: ${message.content}`))
+      .catch(console.log);
+  }
+  
+  /*CLIENT.fetchWebhook(CONFIG.webhook.id, CONFIG.webhook.token)
+    .then( (webhook) => webhook.sendMessage(readyMsg) )
+    .catch( console.error );
+  */
+  
+  let embed = {
+    color: 3447003,
+    author: {
+      name: CLIENT.user.username,
+      icon_url: CLIENT.user.avatarURL
+    },
+    title: 'This is an embed',
+    url: 'http://google.com',
+    description: `[abcdef](http://google.com "A title") A commit message... -Warped2713`,
+    fields: [
+      {
+        name: 'Fields',
+        value: 'They can have different fields with small headlines.'
+      },
+      {
+        name: 'Masked links',
+        value: 'You can put [masked links](http://google.com) inside of rich embeds.'
+      },
+      {
+        name: 'Markdown',
+        value: 'You can put all the *usual* **__Markdown__** inside of them.'
+      }
+    ],
+    timestamp: new Date(),
+    footer: {
+      icon_url: CLIENT.user.avatarURL,
+      text: '© Example'
+    }
+  };
+  
+  HOOK.send("", {embeds: [embed]})
+      .then( (message) => console.log(`Sent message: ${message.content}`))
+      .catch(console.log);
+  
+});
+
+// Create an event listener for messages
+CLIENT.on('message', message => {
+  // If the message is "ping"
+  if (message.content === 'ping') {
+    // Send "pong" to the same channel
+    message.channel.send('pong');
+  }
+});
+
+CLIENT.on('disconnect', closeEvent => {
+  let d = new Date();
+  console.log(d.toLocaleString());
+  
+  if (closeEvent) {
+    console.log( CONFIG.bot.name + ' went offline with code ' + closeEvent.code + ": " + closeEvent.reason);
+    console.log("Exiting...");
+  } else {
+    console.log('Mr.Prog went offline with unknown code');
+  }
+});
+
+CLIENT.on('reconnecting', () => {
+  let d = new Date();
+  console.log(d.toLocaleString());
+  console.log('Mr.Prog is attempting to reconnect');
+});
+
+CLIENT.on('warn', warn => {
+  let d = new Date();
+  console.log(d.toLocaleString());
+  if (warn) {
+    console.log('Warning: ' + warn);
+  }
+});
+
+CLIENT.on('error', error => {
+  let d = new Date();
+  console.log(d.toLocaleString());
+  if (error) {
+    console.log('Error: ' + error.message);
+  } else {
+    console.log('Unknown error');
+  }
+});
+
+
+/* ============================================
+ * Log our bot into Discord
+ * ========================================= */
+console.log("Logging in...");
+// Log our bot in
+CLIENT.login(CONFIG.bot.token);
