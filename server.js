@@ -229,7 +229,7 @@ function processData(type, data) {
         
         for(let i = 0; i < Math.min(data.commits.length, 5); i++) {
           let changelog = `${data.commits[i].modified.length} changes; ${data.commits[i].added.length} additions; ${data.commits[i].removed.length} deletions`;
-          output.DESCRIPTION += `[${data.commits[i].id.substring(0,8)}](${data.commits[i].url} ${changelog}) `;
+          output.DESCRIPTION += `[${data.commits[i].id.substring(0,8)}](${data.commits[i].url} "${changelog}") `;
           output.DESCRIPTION += `${data.commits[i].message.substring(0,32)}... - ${data.commits[i].author.name}`;
           output.DESCRIPTION +=  `\n`;
         }
@@ -309,14 +309,14 @@ function processData(type, data) {
         case "merge_request":
         case "MergeRequest":
           output.COLOR = ColorCodes.merge_request_comment;
-          output.TITLE = `[${data.project.path_with_namespace}] New Comment on Merge Request ${data.merge_request.iid}`;
+          output.TITLE = `[${data.project.path_with_namespace}] New Comment on Merge Request #${data.merge_request.iid}`;
           output.FIELDS.push({
             name: "Merge Request:",
             value: data.merge_request.title
           });
           output.FIELDS.push({
             name: "Source --> Target",
-            value: `${data.merge_request.source.path_with_namespace}:${data.merge_request.source_branch} ---> ${data.merge_request.target.path_with_namespace}:${data.merge_request.target_branch}`
+            value: `[${data.merge_request.source.path_with_namespace}:${data.merge_request.source_branch}] ---> [${data.merge_request.target.path_with_namespace}:${data.merge_request.target_branch}]`
           });
           output.FIELDS.push({
             name: "Assigned To:",
@@ -333,6 +333,13 @@ function processData(type, data) {
         case "snippet":
           // TODO https://docs.gitlab.com/ce/user/project/integrations/webhooks.html#comment-on-code-snippet
           console.log("## Unhandled case for Note Hook ", data.object_attributes.noteable_type );
+          output.TITLE = `[${data.project.path_with_namespace}] New Comment on Code Snippet`;
+          
+          output.FIELDS.push({
+            name: `Snippet: ${data.snippet.title}`,
+            value: data.snippet.content;
+          }); 
+          
           break;
           
         default:
@@ -373,14 +380,14 @@ function processData(type, data) {
       if (data.object_attributes.source) {
         output.FIELDS.push({
           name: "Source:",
-          value: `[${data.object_attributes.source.path_with_namespace}](${data.object_attributes.source.web_url} ${data.object_attributes.source.name})`
+          value: `[${data.object_attributes.source.path_with_namespace}](${data.object_attributes.source.web_url} "${data.object_attributes.source.name}")`
         });
       } 
       
       if (data.object_attributes.target) {
         output.FIELDS.push({
           name: "Target:",
-          value: `[${data.object_attributes.target.path_with_namespace}](${data.object_attributes.target.web_url} ${data.object_attributes.target.name})`
+          value: `[${data.object_attributes.target.path_with_namespace}](${data.object_attributes.target.web_url} "${data.object_attributes.target.name}")`
         });
       }
       break;
