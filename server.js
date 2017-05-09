@@ -603,7 +603,7 @@ CLIENT.on('message', msg => {
     
     // Only process command if it is recognized
     if ( COMMANDS.hasOwnProperty(cmd) ) {
-      COMMANDS.cmd(msg, arg);
+      COMMANDS[cmd](msg, arg);
     }
     
   }  
