@@ -199,18 +199,21 @@ function processData(type, data) {
   
   let output = {
     COLOR: ColorCodes.default,
-    USERNAME: data.user_name,
-    AVATAR_URL: data.user_avatar,
     TITLE: "",
-    PERMALINK: data.project.web_url,
+    USERNAME: "",
+    AVATAR_URL: "",
+    PERMALINK: "",
     DESCRIPTION: "",
-    FIELDS: null
+    FIELDS: []
   };
   
   switch(type) {
       
     case "Push Hook":
       output.COLOR = ColorCodes.commit;
+      output.USERNAME = data.user_name;
+      output.AVATAR_URL = data.user_avatar;
+      output.PERMALINK = data.project.web_url;
       
       if (data.commits.length == 1) {
         
@@ -235,6 +238,8 @@ function processData(type, data) {
       
     case "Tag Push Hook":
       // TODO https://docs.gitlab.com/ce/user/project/integrations/webhooks.html#tag-events
+      console.log("# Unhandled case! Tag Push Hook.");
+      output.DESCRIPTION =  "**Tag Push Hook** This feature is not yet implemented";
       break;
       
     case "Issue Hook":
@@ -346,11 +351,11 @@ function processData(type, data) {
       switch( data.object_attributes.action ) {
         case "open": 
           output.COLOR = ColorCodes.merge_request_opened;
-          output.TITLE = `[${data.project.path_with_namespace}] Merge Request Opened: ${data.object_attributes.iid} ${data.object_attributes.title}`;
+          output.TITLE = `[${data.object_attributes.target.path_with_namespace}] Merge Request Opened: ${data.object_attributes.iid} ${data.object_attributes.title}`;
           break;
         case "close":
           output.COLOR = ColorCodes.merge_request_closed;
-          output.TITLE = `[${data.project.path_with_namespace}] Merge Request Closed: ${data.object_attributes.iid} ${data.object_attributes.title}`;
+          output.TITLE = `[${data.object_attributes.target.path_with_namespace}] Merge Request Closed: ${data.object_attributes.iid} ${data.object_attributes.title}`;
           break;
         default:
           output.COLOR = ColorCodes.merge_request_comment;
@@ -368,14 +373,14 @@ function processData(type, data) {
       if (data.object_attributes.source) {
         output.FIELDS.push({
           name: "Source:",
-          value: `[${data.object_attributes.source.path_with_namespace}](${data.object_attributes.source.web_url} ${data.object_attributres.source.name})`
+          value: `[${data.object_attributes.source.path_with_namespace}](${data.object_attributes.source.web_url} ${data.object_attributes.source.name})`
         });
       } 
       
       if (data.object_attributes.target) {
         output.FIELDS.push({
           name: "Target:",
-          value: `[${data.object_attributes.target.path_with_namespace}](${data.object_attributes.target.web_url} ${data.object_attributres.target.name})`
+          value: `[${data.object_attributes.target.path_with_namespace}](${data.object_attributes.target.web_url} ${data.object_attributes.target.name})`
         });
       }
       break;
@@ -403,16 +408,19 @@ function processData(type, data) {
     case "Pipeline Hook":
       // TODO https://docs.gitlab.com/ce/user/project/integrations/webhooks.html#pipeline-events
       console.log("# Unhandled case! Pipeline Hook.");
+      output.DESCRIPTION =  "**Pipeline Hook** This feature is not yet implemented";
       break;
       
     case "Build Hook":
       // TODO https://docs.gitlab.com/ce/user/project/integrations/webhooks.html#build-events
       console.log("# Unhandled case! Build Hook.");
+      output.DESCRIPTION =  "**Build Hook** This feature is not yet implemented";
       break;
       
     default:
       // TODO
       console.log("# Unhandled case! ", type);
+      output.DESCRIPTION =  `**Type: ${type}** This feature is not yet implemented`;
       break;
   }
   
@@ -437,7 +445,7 @@ function sendData(input) {
     timestamp: new Date()
   };
   
-  HOOK.send("", {embed: embed})
+  HOOK.send("", {embeds: [embed]})
       .then( (message) => console.log(`Sent embed`))
       .catch(console.log);
   
@@ -480,7 +488,7 @@ const SAMPLE = {
   build: {type: "Build Hook", filename: "sample/build.json"},
   issue: {type: "Issue Hook", filename: "sample/issue.json"},
   merge: {type: "Merge Request Hook", filename: "sample/merge.json"},
-  merge_request: this.merge,
+  merge_request: {type: "Merge Request Hook", filename: "sample/merge.json"},
   commit_comment: {type: "Note Hook", filename: "sample/note-commit.json"},
   issue_comment: {type: "Note Hook", filename: "sample/note-issue.json"},
   merge_comment: {type: "Note Hook", filename: "sample/note-merge.json"},
