@@ -39,10 +39,10 @@ The **package.json** file includes the following dependencies:
 ## Configuration
 1. Create your Discord Bot at https://discordapp.com/developers/applications/me (keep this tab open so you can easily access Client ID and Client Secret)
 2. Make your Discord app a Bot User by clicking the "Create Bot User" button in your app page settings.
-2. Calculated the desired permissions for your bot at https://discordapi.com/permissions.html (or use the default 536964096)
-3. Authorize your Discord Bot for your server using `https://discordapp.com/oauth2/authorize?client_id={YOUR_CLIENT_ID}&scope=bot&permissions={YOUR_CALCULATED_PERMISSIONS}` NOTE: if you get "Unexpected Error" then you probably forgot to turn your Discord App into a Bot User in Step 2.
-4. In your local bot repo, rename the dev/require/config-dummy.json to dev/require/config.json
-2. Fill in the data as follows:
+3. Calculated the desired permissions for your bot at https://discordapi.com/permissions.html (or use the default 536964096)
+4. Authorize your Discord Bot for your server using `https://discordapp.com/oauth2/authorize?client_id={YOUR_CLIENT_ID}&scope=bot&permissions={YOUR_CALCULATED_PERMISSIONS}` NOTE: if you get "Unexpected Error" then you probably forgot to turn your Discord App into a Bot User in Step 2.
+5. In your local bot repo, rename the dev/require/config-dummy.json to dev/require/config.json
+6. Fill in the data as follows:
 ```json
 {
   
@@ -69,3 +69,34 @@ The **package.json** file includes the following dependencies:
 }
 
 ```
+7. [Optional] Instead of keeping your tokens in a file, you can choose to set up environment variables and export them for use with the bot script
+```
+echo $WEBHOOK_BOT_TOKEN
+export WEBHOOK_BOT_TOKEN=MySecretDiscordBotToken
+echo $WEBHOOK_BOT_TOKEN
+
+echo $GITLAB_TOKEN
+export GITLAB_TOKEN=MySecretWebhookToken
+echo $GITLAB_TOKEN
+```
+8. In your local GitLab server, set up a new webhook using your chosen host, port, and the GITLAB_TOKEN specified in step 7.
+9. Run the bot
+```
+pm2 start bot --name Discord-GitLab-Webhook
+```
+10. Test the webhook by clicking the 'Test' button in GitLab
+
+
+## GitLab Event Support
+* Push Events
+* Tag Events (Not yet)
+* Issue Events
+* Comment Events
+    * Commits
+    * Merge Requests
+    * Issues
+    * Code Snippets (Not yet)
+* Merge Request Events
+* Wiki Page Events
+* Pipeline Events (Not yet)
+* Build Events (Not yet)

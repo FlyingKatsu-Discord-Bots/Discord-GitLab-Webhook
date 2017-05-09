@@ -1,14 +1,16 @@
 // Import configuration files
 const CONFIG = require('./require/config.json');
 
+
 // Import required modules
-//const NET = require('net');
+const NET = require('net');
+
 
 // Import the discord.js module
 const DISCORD = require('discord.js');
-
 // Create an instance of a Discord client
 const CLIENT = new DISCORD.Client();
+
 
 /* ============================================
  * Timer to check if disconnected from Discord
@@ -34,11 +36,18 @@ var interval_dc = setInterval( checkDisconnect, 3000 );
 
 
 /* ============================================
- * Set Up Webhook stuff
+ * Set up Server listening stuff
+ * ========================================= */
+
+
+
+/* ============================================
+ * Set up Webhook stuff
  * ========================================= */
 const HOOK = new DISCORD.WebhookClient(CONFIG.webhook.id, CONFIG.webhook.token);
 //const GUILD = CLIENT.guilds.get(HOOK.guildID);
 //const CHANNEL = GUILD.channels.get(HOOK.channelID);
+
 
 /* ============================================
  * Discord.JS Event Handlers
@@ -64,6 +73,40 @@ CLIENT.on('ready', () => {
     .then( (webhook) => webhook.sendMessage(readyMsg) )
     .catch( console.error );
   */
+  
+  let embed = {
+    color: 3447003,
+    author: {
+      name: CLIENT.user.username,
+      icon_url: CLIENT.user.avatarURL
+    },
+    title: 'This is an embed',
+    url: 'http://google.com',
+    description: `[abcdef](http://google.com "A title") A commit message... -Warped2713`,
+    fields: [
+      {
+        name: 'Fields',
+        value: 'They can have different fields with small headlines.'
+      },
+      {
+        name: 'Masked links',
+        value: 'You can put [masked links](http://google.com) inside of rich embeds.'
+      },
+      {
+        name: 'Markdown',
+        value: 'You can put all the *usual* **__Markdown__** inside of them.'
+      }
+    ],
+    timestamp: new Date(),
+    footer: {
+      icon_url: CLIENT.user.avatarURL,
+      text: '© Example'
+    }
+  };
+  
+  HOOK.send("", {embeds: [embed]})
+      .then( (message) => console.log(`Sent message: ${message.content}`))
+      .catch(console.log);
   
 });
 
