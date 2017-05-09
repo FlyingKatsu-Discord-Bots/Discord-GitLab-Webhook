@@ -283,49 +283,49 @@ function processData(type, data) {
       
       switch( data.object_attributes.noteable_type ) {
         
-        case: "commit":
-        case: "Commit":
+        case "commit":
+        case "Commit":
           output.COLOR = ColorCodes.commit;
           output.TITLE = `[${data.project.path_with_namespace}] New Comment on Commit ${data.commit.id.substring(0,8)}`;
           output.FIELDS.push({
             name: "Commit Message:",
-            value: data.commit.message;
+            value: data.commit.message
           });
           output.FIELDS.push({
             name: "Commit Author:",
-            value: data.commit.author.name;
+            value: data.commit.author.name
           });
           output.FIELDS.push({
             name: "Commit Timestamp:",
-            value: data.commit.timestamp;
+            value: data.commit.timestamp
           });          
           break;
           
-        case: "merge_request":
-        case: "MergeRequest":
+        case "merge_request":
+        case "MergeRequest":
           output.COLOR = ColorCodes.merge_request_comment;
           output.TITLE = `[${data.project.path_with_namespace}] New Comment on Merge Request ${data.merge_request.iid}`;
           output.FIELDS.push({
             name: "Merge Request:",
-            value: data.merge_request.title;
+            value: data.merge_request.title
           });
           output.FIELDS.push({
             name: "Source --> Target",
-            value: `${data.merge_request.source.path_with_namespace}:${data.merge_request.source_branch} ---> ${data.merge_request.target.path_with_namespace}:${data.merge_request.target_branch}`;
+            value: `${data.merge_request.source.path_with_namespace}:${data.merge_request.source_branch} ---> ${data.merge_request.target.path_with_namespace}:${data.merge_request.target_branch}`
           });
           output.FIELDS.push({
             name: "Assigned To:",
-            value: data.merge_request.assignee.username;
+            value: data.merge_request.assignee.username
           });     
           break;
           
-        case: "issue":
-        case: "Issue":
+        case "issue":
+        case "Issue":
           output.COLOR = ColorCodes.issue_comment;
           output.TITLE = `[${data.project.path_with_namespace}] New Comment on Issue #${data.issue.iid} ${data.issue.title}`;
           break;
           
-        case: "snippet":
+        case "snippet":
           // TODO https://docs.gitlab.com/ce/user/project/integrations/webhooks.html#comment-on-code-snippet
           console.log("## Unhandled case for Note Hook ", data.object_attributes.noteable_type );
           break;
@@ -390,12 +390,12 @@ function processData(type, data) {
       
       output.FIELDS.push({
           name: "Title",
-          value: data.object_attributes.title;
+          value: data.object_attributes.title
         });
       
       output.FIELDS.push({
           name: "Content:",
-          value: data.object_attributes.content.substring(0, Math.min(data.object_attributes.content.length, 128));
+          value: data.object_attributes.content.substring(0, Math.min(data.object_attributes.content.length, 128))
         });
       
       break;
@@ -480,7 +480,7 @@ const SAMPLE = {
   build: {type: "Build Hook", filename: "sample/build.json"},
   issue: {type: "Issue Hook", filename: "sample/issue.json"},
   merge: {type: "Merge Request Hook", filename: "sample/merge.json"},
-  merge_request: SAMPLE.merge,
+  merge_request: this.merge,
   commit_comment: {type: "Note Hook", filename: "sample/note-commit.json"},
   issue_comment: {type: "Note Hook", filename: "sample/note-issue.json"},
   merge_comment: {type: "Note Hook", filename: "sample/note-merge.json"},
@@ -511,11 +511,11 @@ const COMMANDS = {
     }    
   },
   
-  ping: function(msg) {
+  ping: function(msg, arg) {
     msg.channel.send('pong').catch(console.log);
   },
   
-  test: function(msg) {
+  test: function(msg, arg) {
     msg.channel.send('Sending a sample embed').catch(console.log);
     
     let embed = {
@@ -594,12 +594,19 @@ CLIENT.on('ready', () => {
 });
 
 // Create an event listener for messages
-CLIENT.on('message', message => {
-  // If the message is "ping"
-  if (message.content === 'ping') {
-    // Send "pong" to the same channel
-    message.channel.send('pong');
-  }
+CLIENT.on('message', msg => {
+  // Only read message if it starts with delimiter
+  if (msg.content.startsWith(CONFIG.bot.delimiter)) {
+    
+    // Parse cmd and args
+    let [cmd, ...arg] = msg.content.substring(CONFIG.bot.delimiter.length).toLowerCase().split(" ");
+    
+    // Only process command if it is recognized
+    if ( COMMANDS.hasOwnProperty(cmd) ) {
+      COMMANDS.cmd(msg, arg);
+    }
+    
+  }  
 });
 
 CLIENT.on('disconnect', closeEvent => {
