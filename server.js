@@ -207,230 +207,236 @@ function processData(type, data) {
     FIELDS: []
   };
   
-  switch(type) {
-      
-    case "Push Hook":
-      output.COLOR = ColorCodes.commit;
-      output.USERNAME = data.user_name;
-      output.AVATAR_URL = data.user_avatar;
-      output.PERMALINK = data.project.web_url;
-      
-      if (data.commits.length == 1) {
-        
-        output.TITLE = `[${data.project.path_with_namespace}] 1 new commmit`;
-        output.DESCRIPTION +=  `${data.commits[i].message}\n`;
-        output.DESCRIPTION +=  `${data.commits[i].modified.length} changes\n`;
-        output.DESCRIPTION +=  `${data.commits[i].added.length} additions\n`;
-        output.DESCRIPTION +=  `${data.commits[i].removed.length} deletions`;
-        
-      } else {
-        
-        output.TITLE = `[${data.project.path_with_namespace}] ${data.total_commits_count} new commits`;
-        
-        for(let i = 0; i < Math.min(data.commits.length, 5); i++) {
-          let changelog = `${data.commits[i].modified.length} changes; ${data.commits[i].added.length} additions; ${data.commits[i].removed.length} deletions`;
-          output.DESCRIPTION += `[${data.commits[i].id.substring(0,8)}](${data.commits[i].url} "${changelog}") `;
-          output.DESCRIPTION += `${data.commits[i].message.substring(0,32)}... - ${data.commits[i].author.name}`;
-          output.DESCRIPTION +=  `\n`;
+  try {
+    switch(type) {
+
+      case "Push Hook":
+        output.COLOR = ColorCodes.commit;
+        output.USERNAME = data.user_name;
+        output.AVATAR_URL = data.user_avatar;
+        output.PERMALINK = data.project.web_url;
+
+        if (data.commits.length == 1) {
+
+          output.TITLE = `[${data.project.path_with_namespace}] 1 new commmit`;
+          output.DESCRIPTION +=  `${data.commits[i].message}\n`;
+          output.DESCRIPTION +=  `${data.commits[i].modified.length} changes\n`;
+          output.DESCRIPTION +=  `${data.commits[i].added.length} additions\n`;
+          output.DESCRIPTION +=  `${data.commits[i].removed.length} deletions`;
+
+        } else {
+
+          output.TITLE = `[${data.project.path_with_namespace}] ${data.total_commits_count} new commits`;
+
+          for(let i = 0; i < Math.min(data.commits.length, 5); i++) {
+            let changelog = `${data.commits[i].modified.length} changes; ${data.commits[i].added.length} additions; ${data.commits[i].removed.length} deletions`;
+            output.DESCRIPTION += `[${data.commits[i].id.substring(0,8)}](${data.commits[i].url} "${changelog}") `;
+            output.DESCRIPTION += `${data.commits[i].message.substring(0,32)}... - ${data.commits[i].author.name}`;
+            output.DESCRIPTION +=  `\n`;
+          }
+        }      
+        break;
+
+      case "Tag Push Hook":
+        // TODO https://docs.gitlab.com/ce/user/project/integrations/webhooks.html#tag-events
+        console.log("# Unhandled case! Tag Push Hook.");
+        output.DESCRIPTION =  "**Tag Push Hook** This feature is not yet implemented";
+        break;
+
+      case "Issue Hook":
+        output.USERNAME = data.user.username;
+        output.AVATAR_URL = data.user.avatar_url;
+        output.PERMALINK = data.object_attributes.url;
+        output.DESCRIPTION =  data.object_attributes.description.substring(0,128);
+
+        switch( data.object_attributes.action ) {
+          case "open": 
+            output.COLOR = ColorCodes.issue_opened;
+            output.TITLE = `[${data.project.path_with_namespace}] Issue Opened: #${data.object_attributes.iid} ${data.object_attributes.title}`;
+            break;
+          case "close":
+            output.COLOR = ColorCodes.issue_closed;
+            output.TITLE = `[${data.project.path_with_namespace}] Issue Closed: #${data.object_attributes.iid} ${data.object_attributes.title}`;
+            break;
+          default:
+            output.COLOR = ColorCodes.issue_comment;
+            console.log("## Unhandled case for Issue Hook ", data.object_attributes.action );
+            break;
         }
-      }      
-      break;
-      
-    case "Tag Push Hook":
-      // TODO https://docs.gitlab.com/ce/user/project/integrations/webhooks.html#tag-events
-      console.log("# Unhandled case! Tag Push Hook.");
-      output.DESCRIPTION =  "**Tag Push Hook** This feature is not yet implemented";
-      break;
-      
-    case "Issue Hook":
-      output.USERNAME = data.user.username;
-      output.AVATAR_URL = data.user.avatar_url;
-      output.PERMALINK = data.object_attributes.url;
-      output.DESCRIPTION =  data.object_attributes.description.substring(0,128);
-      
-      switch( data.object_attributes.action ) {
-        case "open": 
-          output.COLOR = ColorCodes.issue_opened;
-          output.TITLE = `[${data.project.path_with_namespace}] Issue Opened: #${data.object_attributes.iid} ${data.object_attributes.title}`;
-          break;
-        case "close":
-          output.COLOR = ColorCodes.issue_closed;
-          output.TITLE = `[${data.project.path_with_namespace}] Issue Closed: #${data.object_attributes.iid} ${data.object_attributes.title}`;
-          break;
-        default:
-          output.COLOR = ColorCodes.issue_comment;
-          console.log("## Unhandled case for Issue Hook ", data.object_attributes.action );
-          break;
-      }
-      
-      if (data.assignees.length > 0) {
-        let assignees = { name: "Assigned To:", value: "" };
-        for(let i = 0; i < data.assignees.length; i++) {
-          assignees.value += `${data.assignees[i].username} `;
+
+        if (data.assignees.length > 0) {
+          let assignees = { name: "Assigned To:", value: "" };
+          for(let i = 0; i < data.assignees.length; i++) {
+            assignees.value += `${data.assignees[i].username} `;
+          }
+          output.FIELDS.push(assignees);
+        } 
+
+        if (data.labels.length > 0) {
+          let labels = { name: "Labeled As:", value: "" };
+          for(let i = 0; i < data.labels.length; i++) {
+            labels.value += `${data.labels[i].type} `;
+          }
+          output.FIELDS.push(labels);
+        }      
+        break;
+
+      case "Note Hook":
+        output.USERNAME = data.user.username;
+        output.AVATAR_URL = data.user.avatar_url;
+        output.DESCRIPTION =  data.object_attributes.note.substring(0,128);
+        output.PERMALINK = data.object_attributes.url;
+
+        switch( data.object_attributes.noteable_type ) {
+
+          case "commit":
+          case "Commit":
+            output.COLOR = ColorCodes.commit;
+            output.TITLE = `[${data.project.path_with_namespace}] New Comment on Commit ${data.commit.id.substring(0,8)}`;
+            output.FIELDS.push({
+              name: "Commit Message:",
+              value: data.commit.message
+            });
+            output.FIELDS.push({
+              name: "Commit Author:",
+              value: data.commit.author.name
+            });
+            output.FIELDS.push({
+              name: "Commit Timestamp:",
+              value: data.commit.timestamp
+            });          
+            break;
+
+          case "merge_request":
+          case "MergeRequest":
+            output.COLOR = ColorCodes.merge_request_comment;
+            output.TITLE = `[${data.project.path_with_namespace}] New Comment on Merge Request #${data.merge_request.iid}`;
+            output.FIELDS.push({
+              name: "Merge Request:",
+              value: data.merge_request.title
+            });
+            output.FIELDS.push({
+              name: "Source --> Target",
+              value: `[${data.merge_request.source.path_with_namespace}:${data.merge_request.source_branch}] ---> [${data.merge_request.target.path_with_namespace}:${data.merge_request.target_branch}]`
+            });
+            output.FIELDS.push({
+              name: "Assigned To:",
+              value: data.merge_request.assignee.username
+            });     
+            break;
+
+          case "issue":
+          case "Issue":
+            output.COLOR = ColorCodes.issue_comment;
+            output.TITLE = `[${data.project.path_with_namespace}] New Comment on Issue #${data.issue.iid} ${data.issue.title}`;
+            break;
+
+          case "snippet":
+            // TODO https://docs.gitlab.com/ce/user/project/integrations/webhooks.html#comment-on-code-snippet
+            console.log("## Unhandled case for Note Hook ", data.object_attributes.noteable_type );
+            output.TITLE = `[${data.project.path_with_namespace}] New Comment on Code Snippet`;
+
+            output.FIELDS.push({
+              name: `Snippet: ${data.snippet.title}`,
+              value: data.snippet.content;
+            }); 
+
+            break;
+
+          default:
+            console.log("## Unhandled case for Note Hook ", data.object_attributes.noteable_type );
+            break;
         }
-        output.FIELDS.push(assignees);
-      } 
-      
-      if (data.labels.length > 0) {
-        let labels = { name: "Labeled As:", value: "" };
-        for(let i = 0; i < data.labels.length; i++) {
-          labels.value += `${data.labels[i].type} `;
+
+        break;
+
+      case "Merge Request Hook":
+        output.USERNAME = data.user.username;
+        output.AVATAR_URL = data.user.avatar_url;
+        output.PERMALINK = data.object_attributes.url;
+        output.DESCRIPTION =  data.object_attributes.description.substring(0,128);
+
+        switch( data.object_attributes.action ) {
+          case "open": 
+            output.COLOR = ColorCodes.merge_request_opened;
+            output.TITLE = `[${data.object_attributes.target.path_with_namespace}] Merge Request Opened: ${data.object_attributes.iid} ${data.object_attributes.title}`;
+            break;
+          case "close":
+            output.COLOR = ColorCodes.merge_request_closed;
+            output.TITLE = `[${data.object_attributes.target.path_with_namespace}] Merge Request Closed: ${data.object_attributes.iid} ${data.object_attributes.title}`;
+            break;
+          default:
+            output.COLOR = ColorCodes.merge_request_comment;
+            console.log("## Unhandled case for Merge Request Hook ", data.object_attributes.action );
+            break;
         }
-        output.FIELDS.push(labels);
-      }      
-      break;
-      
-    case "Note Hook":
-      output.USERNAME = data.user.username;
-      output.AVATAR_URL = data.user.avatar_url;
-      output.DESCRIPTION =  data.object_attributes.note.substring(0,128);
-      output.PERMALINK = data.object_attributes.url;
-      
-      switch( data.object_attributes.noteable_type ) {
-        
-        case "commit":
-        case "Commit":
-          output.COLOR = ColorCodes.commit;
-          output.TITLE = `[${data.project.path_with_namespace}] New Comment on Commit ${data.commit.id.substring(0,8)}`;
-          output.FIELDS.push({
-            name: "Commit Message:",
-            value: data.commit.message
-          });
-          output.FIELDS.push({
-            name: "Commit Author:",
-            value: data.commit.author.name
-          });
-          output.FIELDS.push({
-            name: "Commit Timestamp:",
-            value: data.commit.timestamp
-          });          
-          break;
-          
-        case "merge_request":
-        case "MergeRequest":
-          output.COLOR = ColorCodes.merge_request_comment;
-          output.TITLE = `[${data.project.path_with_namespace}] New Comment on Merge Request #${data.merge_request.iid}`;
-          output.FIELDS.push({
-            name: "Merge Request:",
-            value: data.merge_request.title
-          });
-          output.FIELDS.push({
-            name: "Source --> Target",
-            value: `[${data.merge_request.source.path_with_namespace}:${data.merge_request.source_branch}] ---> [${data.merge_request.target.path_with_namespace}:${data.merge_request.target_branch}]`
-          });
+
+        if (data.object_attributes.assignee) {
           output.FIELDS.push({
             name: "Assigned To:",
-            value: data.merge_request.assignee.username
-          });     
-          break;
-          
-        case "issue":
-        case "Issue":
-          output.COLOR = ColorCodes.issue_comment;
-          output.TITLE = `[${data.project.path_with_namespace}] New Comment on Issue #${data.issue.iid} ${data.issue.title}`;
-          break;
-          
-        case "snippet":
-          // TODO https://docs.gitlab.com/ce/user/project/integrations/webhooks.html#comment-on-code-snippet
-          console.log("## Unhandled case for Note Hook ", data.object_attributes.noteable_type );
-          output.TITLE = `[${data.project.path_with_namespace}] New Comment on Code Snippet`;
-          
+            value: `${data.object_attributes.assignee.username}`
+          });
+        }
+
+        if (data.object_attributes.source) {
           output.FIELDS.push({
-            name: `Snippet: ${data.snippet.title}`,
-            value: data.snippet.content;
-          }); 
-          
-          break;
-          
-        default:
-          console.log("## Unhandled case for Note Hook ", data.object_attributes.noteable_type );
-          break;
-      }
-      
-      break;
-      
-    case "Merge Request Hook":
-      output.USERNAME = data.user.username;
-      output.AVATAR_URL = data.user.avatar_url;
-      output.PERMALINK = data.object_attributes.url;
-      output.DESCRIPTION =  data.object_attributes.description.substring(0,128);
-      
-      switch( data.object_attributes.action ) {
-        case "open": 
-          output.COLOR = ColorCodes.merge_request_opened;
-          output.TITLE = `[${data.object_attributes.target.path_with_namespace}] Merge Request Opened: ${data.object_attributes.iid} ${data.object_attributes.title}`;
-          break;
-        case "close":
-          output.COLOR = ColorCodes.merge_request_closed;
-          output.TITLE = `[${data.object_attributes.target.path_with_namespace}] Merge Request Closed: ${data.object_attributes.iid} ${data.object_attributes.title}`;
-          break;
-        default:
-          output.COLOR = ColorCodes.merge_request_comment;
-          console.log("## Unhandled case for Merge Request Hook ", data.object_attributes.action );
-          break;
-      }
-      
-      if (data.object_attributes.assignee) {
+            name: "Source:",
+            value: `[${data.object_attributes.source.path_with_namespace}](${data.object_attributes.source.web_url} "${data.object_attributes.source.name}")`
+          });
+        } 
+
+        if (data.object_attributes.target) {
+          output.FIELDS.push({
+            name: "Target:",
+            value: `[${data.object_attributes.target.path_with_namespace}](${data.object_attributes.target.web_url} "${data.object_attributes.target.name}")`
+          });
+        }
+        break;
+
+      case "Wiki Page Hook":
+        output.USERNAME = data.user.username;
+        output.AVATAR_URL = data.user.avatar_url;
+        output.PERMALINK = data.object_attributes.url;
+        output.DESCRIPTION =  data.object_attributes.message.substring(0,128);
+
+        output.TITLE = `[${data.project.path_with_namespace}] Wiki Action: ${data.object_attributes.action}`;
+
         output.FIELDS.push({
-          name: "Assigned To:",
-          value: `${data.object_attributes.assignee.username}`
-        });
-      }
-      
-      if (data.object_attributes.source) {
+            name: "Title",
+            value: data.object_attributes.title
+          });
+
         output.FIELDS.push({
-          name: "Source:",
-          value: `[${data.object_attributes.source.path_with_namespace}](${data.object_attributes.source.web_url} "${data.object_attributes.source.name}")`
-        });
-      } 
-      
-      if (data.object_attributes.target) {
-        output.FIELDS.push({
-          name: "Target:",
-          value: `[${data.object_attributes.target.path_with_namespace}](${data.object_attributes.target.web_url} "${data.object_attributes.target.name}")`
-        });
-      }
-      break;
-      
-    case "Wiki Page Hook":
-      output.USERNAME = data.user.username;
-      output.AVATAR_URL = data.user.avatar_url;
-      output.PERMALINK = data.object_attributes.url;
-      output.DESCRIPTION =  data.object_attributes.message.substring(0,128);
-      
-      output.TITLE = `[${data.project.path_with_namespace}] Wiki Action: ${data.object_attributes.action}`;
-      
-      output.FIELDS.push({
-          name: "Title",
-          value: data.object_attributes.title
-        });
-      
-      output.FIELDS.push({
-          name: "Content:",
-          value: data.object_attributes.content.substring(0, Math.min(data.object_attributes.content.length, 128))
-        });
-      
-      break;
-      
-    case "Pipeline Hook":
-      // TODO https://docs.gitlab.com/ce/user/project/integrations/webhooks.html#pipeline-events
-      console.log("# Unhandled case! Pipeline Hook.");
-      output.DESCRIPTION =  "**Pipeline Hook** This feature is not yet implemented";
-      break;
-      
-    case "Build Hook":
-      // TODO https://docs.gitlab.com/ce/user/project/integrations/webhooks.html#build-events
-      console.log("# Unhandled case! Build Hook.");
-      output.DESCRIPTION =  "**Build Hook** This feature is not yet implemented";
-      break;
-      
-    default:
-      // TODO
-      console.log("# Unhandled case! ", type);
-      output.DESCRIPTION =  `**Type: ${type}** This feature is not yet implemented`;
-      break;
+            name: "Content:",
+            value: data.object_attributes.content.substring(0, Math.min(data.object_attributes.content.length, 128))
+          });
+
+        break;
+
+      case "Pipeline Hook":
+        // TODO https://docs.gitlab.com/ce/user/project/integrations/webhooks.html#pipeline-events
+        console.log("# Unhandled case! Pipeline Hook.");
+        output.DESCRIPTION =  "**Pipeline Hook** This feature is not yet implemented";
+        break;
+
+      case "Build Hook":
+        // TODO https://docs.gitlab.com/ce/user/project/integrations/webhooks.html#build-events
+        console.log("# Unhandled case! Build Hook.");
+        output.DESCRIPTION =  "**Build Hook** This feature is not yet implemented";
+        break;
+
+      default:
+        // TODO
+        console.log("# Unhandled case! ", type);
+        output.DESCRIPTION =  `**Type: ${type}** This feature is not yet implemented`;
+        break;
+    }
+  } catch(e) {
+    console.error(e);
+    output.TITLE = "ERROR"
+    output.DESCRIPTION = "Unable to complete processing data from an HTTP request.  Check console log for details.";
   }
-  
+    
   // Send data via webhook
   sendData(output);
 }

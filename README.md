@@ -96,7 +96,7 @@ pm2 start bot --name Discord-GitLab-Webhook
     * Commits
     * Merge Requests
     * Issues
-    * Code Snippets (Not yet)
+    * Code Snippets
 * Merge Request Events
 * Wiki Page Events
 * Pipeline Events (Not yet)
