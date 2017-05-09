@@ -497,13 +497,13 @@ const COMMANDS = {
   
   embed: function(msg, arg) {
     if ( SAMPLE.hasOwnProperty(arg) ) {      
-      FS.readFile(SAMPLE.arg.filename, 'utf8', function (err, data) {
+      FS.readFile(SAMPLE[arg].filename, 'utf8', function (err, data) {
         if (err) {
           console.error(err);
           msg.channel.send(`There was a problem loading the sample data: ${arg}`).catch(console.log);
         } else {
           msg.channel.send(`Sending a sample embed: ${arg}`).catch(console.log);
-          processData(SAMPLE.arg.type, JSON.parse(data));
+          processData(SAMPLE[arg].type, JSON.parse(data));
         }        
       });      
     } else {
