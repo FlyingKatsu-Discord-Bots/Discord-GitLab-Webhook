@@ -53,14 +53,9 @@ The **package.json** file includes the following dependencies:
     "prefix": "YOUR CHOSEN COMMAND PREFIX"
   },
   
-  "guild": {
-    "id": "RIGHT-CLICK YOUR SERVER/GUILD NAME IN DISCORD AND SELECT 'Copy ID' THEN PASTE HERE"
-  },
-  
   "webhook": {
     "id": "{ID} FROM https://discordapp.com/api/webhooks/{ID}/{TOKEN} WHICH IS GENEREATED WHEN YOU CREATE A WEBHOOK IN DISCORD",
     "token": "{TOKEN} FROM https://discordapp.com/api/webhooks/{ID}/{TOKEN} (USE THIS FOR GITLAB'S SECRET TOKEN BOX)",
-    "source": "YOUR GITLAB REPO",
     "server": {
       "address": "localhost",
       "port": "8000"

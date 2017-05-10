@@ -7,14 +7,9 @@
     "prefix": ">"
   },
   
-  "guild": {
-    "id": "000000000000000000"
-  },
-  
   "webhook": {
     "id": "000000000000000000",
     "token": "",
-    "source": "",
     "server": {
       "address": "localhost",
       "port": "8000"

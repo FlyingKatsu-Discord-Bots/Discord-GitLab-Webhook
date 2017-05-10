@@ -531,6 +531,59 @@ const SAMPLE = {
 
 const COMMANDS = {
   
+  clear: function(msg, arg) {    
+    // Get the number of messages (first arg)
+    let num = (arg[0]) ? parseInt(arg[0]) : 0;
+    if ( !num || num <= 2 || num >= 200 ) {
+      // Inform the user that this number is invalid
+      msg.reply(`You must specify a number between 2 and 200, exclusive.`)
+        .then( (m) => {console.log(`Informed ${msg.author} that the num messages to delete was invalid`)} )
+        .catch(console.error);
+      // End
+      return;
+    }
+    
+    // Get the channel mentioned if it was mentioned, otherwise set to current channel
+    let channel = (msg.mentions.channels.size > 0) ? msg.mentions.channels.first() : msg.channel;
+    if ( channel.type !== "text" ) {
+      // Inform the user that this channel is invalid
+      msg.reply(`You must specify a text channel.`)
+        .then( (m) => {console.log(`Informed ${msg.author} that the channel ${channel} was an invalid type ${channel.type}`)} )
+        .catch(console.error);
+      // End
+      return;
+    }
+    
+    // Set the number of messages to no more than the size of the channel's message collection
+    num = Math.min(num, channel.messages.size);
+    if (num <= 2) {
+      // Inform the user that there are not enough messages in the channel to bulk delete
+      msg.reply(`The channel ${channel} does not have enough messages in it for bulk delete to work. Needs at least 3 messages.`)
+        .then( (m) => {console.log(`Informed ${msg.author} that the channel ${channel} had too few messages`)} )
+        .catch(console.error);
+      // End
+      return;
+    }
+    
+    // Check if author is allowed to manage messages (8192 or 0x2000) in specified channel
+    if ( channel.permissionsFor(msg.author).has(8192) ) {      
+      // Bulk Delete, auto-ignoring messages older than 2 weeks
+      channel.bulkDelete( num, true )
+        .then( (collection) => { 
+          msg.reply(`Successfully deleted ${collection.size} recent messages (from within the past 2 weeks) in ${channel}`)
+            .then( (m) => console.log(`Confirmed success of bulk delete in channel ${channel}`) )
+            .catch(console.error) 
+        } )
+        .catch(console.error);
+      
+    } else {
+      // Inform the user that they are not permitted
+      msg.reply(`Sorry, but you are not permitted to manage messages in ${channel}`)
+        .then( (m) => {console.log(`Informed ${msg.author} that they do not have permission to manage messages in ${channel}`)} )
+        .catch(console.error);
+    }
+  },
+  
   embed: function(msg, arg) {
     if ( SAMPLE.hasOwnProperty(arg) ) {      
       FS.readFile(SAMPLE[arg].filename, 'utf8', function (err, data) {
