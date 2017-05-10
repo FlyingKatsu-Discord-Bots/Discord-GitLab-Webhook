@@ -284,9 +284,14 @@ function processData(type, data) {
       case "Note Hook":
         output.USERNAME = data.user.username;
         output.AVATAR_URL = data.user.avatar_url;
-        output.DESCRIPTION =  data.object_attributes.note.substring(0,128);
+        output.DESCRIPTION =  `New comment by ${data.user.username}`;        
         output.PERMALINK = data.object_attributes.url;
-
+        
+        output.FIELDS.push({
+          name: "Comment",
+          value: data.object_attributes.note.substring(0,128)
+        });
+        
         switch( data.object_attributes.noteable_type ) {
 
           case "commit":
@@ -294,17 +299,18 @@ function processData(type, data) {
             output.COLOR = ColorCodes.commit;
             output.TITLE = `[${data.project.path_with_namespace}] New Comment on Commit ${data.commit.id.substring(0,8)}`;
             output.FIELDS.push({
-              name: "Commit Message:",
+              name: "Commit Message",
               value: data.commit.message
             });
             output.FIELDS.push({
-              name: "Commit Author:",
+              name: "Commit Author",
               value: data.commit.author.name
             });
             output.FIELDS.push({
-              name: "Commit Timestamp:",
-              value: data.commit.timestamp
-            });          
+              name: "Commit Timestamp",
+              // Given Format: 2014-02-27T10:06:20+02:00
+              value: Date.parse(data.commit.timestamp)
+            });
             break;
 
           case "merge_request":
@@ -312,15 +318,15 @@ function processData(type, data) {
             output.COLOR = ColorCodes.merge_request_comment;
             output.TITLE = `[${data.project.path_with_namespace}] New Comment on Merge Request #${data.merge_request.iid}`;
             output.FIELDS.push({
-              name: "Merge Request:",
+              name: "Merge Request",
               value: data.merge_request.title
             });
             output.FIELDS.push({
               name: "Source --> Target",
-              value: `[${data.merge_request.source.path_with_namespace}:${data.merge_request.source_branch}] ---> [${data.merge_request.target.path_with_namespace}:${data.merge_request.target_branch}]`
+              value: `Merge [${data.merge_request.source.path_with_namespace}: ${data.merge_request.source_branch}](${data.merge_request.source.web_url}) into [${data.merge_request.target.path_with_namespace}: ${data.merge_request.target_branch}](${data.merge_request.target.web_url})`
             });
             output.FIELDS.push({
-              name: "Assigned To:",
+              name: "Assigned To",
               value: data.merge_request.assignee.username
             });     
             break;
@@ -332,15 +338,13 @@ function processData(type, data) {
             break;
 
           case "snippet":
-            // TODO https://docs.gitlab.com/ce/user/project/integrations/webhooks.html#comment-on-code-snippet
-            console.log("## Unhandled case for Note Hook ", data.object_attributes.noteable_type );
+          case "Snippet":
             output.TITLE = `[${data.project.path_with_namespace}] New Comment on Code Snippet`;
 
             output.FIELDS.push({
-              name: `Snippet: ${data.snippet.title}`,
-              value: data.snippet.content;
-            }); 
-
+              name: "Snippet",
+              value: "Title: " + data.snippet.title + "\n```\n" + data.snippet.content + "\n```"
+            });
             break;
 
           default:
@@ -370,25 +374,30 @@ function processData(type, data) {
             console.log("## Unhandled case for Merge Request Hook ", data.object_attributes.action );
             break;
         }
-
-        if (data.object_attributes.assignee) {
-          output.FIELDS.push({
-            name: "Assigned To:",
-            value: `${data.object_attributes.assignee.username}`
-          });
-        }
-
-        if (data.object_attributes.source) {
+        
+        output.FIELDS.push({
+          name: "Source --> Target",
+          value: `Merge [${data.object_attributes.source.path_with_namespace}: ${data.object_attributes.source_branch}](${data.object_attributes.source.web_url}) into [${data.object_attributes.target.path_with_namespace}: ${data.object_attributes.target_branch}](${data.object_attributes.target.web_url})`
+        });
+        
+        /*if (data.object_attributes.source) {
           output.FIELDS.push({
             name: "Source:",
-            value: `[${data.object_attributes.source.path_with_namespace}](${data.object_attributes.source.web_url} "${data.object_attributes.source.name}")`
+            value: `[${data.object_attributes.source.path_with_namespace}: ${data.object_attributes.source_branch}](${data.object_attributes.source.web_url} "${data.object_attributes.source.name}")`
           });
         } 
 
         if (data.object_attributes.target) {
           output.FIELDS.push({
             name: "Target:",
-            value: `[${data.object_attributes.target.path_with_namespace}](${data.object_attributes.target.web_url} "${data.object_attributes.target.name}")`
+            value: `[${data.object_attributes.target.path_with_namespace}: ${data.object_attributes.target_branch}](${data.object_attributes.target.web_url} "${data.object_attributes.target.name}")`
+          });
+        }*/
+        
+        if (data.object_attributes.assignee) {
+          output.FIELDS.push({
+            name: "Assigned To",
+            value: `${data.object_attributes.assignee.username}`
           });
         }
         break;
@@ -407,7 +416,7 @@ function processData(type, data) {
           });
 
         output.FIELDS.push({
-            name: "Content:",
+            name: "Content",
             value: data.object_attributes.content.substring(0, Math.min(data.object_attributes.content.length, 128))
           });
 
@@ -424,11 +433,16 @@ function processData(type, data) {
         console.log("# Unhandled case! Build Hook.");
         output.DESCRIPTION =  "**Build Hook** This feature is not yet implemented";
         break;
-
+      
+      case "Fake Error":
+        console.log("# Invoked a Fake Error response.");
+        output.DESCRIPTION = data.fake.error;
+        
       default:
         // TODO
         console.log("# Unhandled case! ", type);
-        output.DESCRIPTION =  `**Type: ${type}** This feature is not yet implemented`;
+        output.TITLE = `Type: ${type}`;
+        output.DESCRIPTION =  `This feature is not yet implemented`;
         break;
     }
   } catch(e) {
@@ -510,7 +524,8 @@ const SAMPLE = {
   push: {type: "Push Hook", filename: "sample/push.json"},
   tag: {type: "Tag Push Hook", filename: "sample/tag.json"},
   wiki: {type: "Wiki Hook", filename: "sample/wiki.json"},
-  unrelated: {type: "", filename: "sample/unrelated.json"}
+  unrelated: {type: "Unrelated", filename: "sample/unrelated.json"},
+  fake_error: {type: "Fake Error", filename: "sample/unrelated.json"}
 };
 
 

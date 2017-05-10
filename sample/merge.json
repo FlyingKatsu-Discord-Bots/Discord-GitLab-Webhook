@@ -22,7 +22,7 @@
     "merge_status": "unchecked",
     "target_project_id": 14,
     "iid": 1,
-    "description": "",
+    "description": "A sample merge request description",
     "source":{
       "name":"Awesome Project",
       "description":"Aut reprehenderit ut est.",
