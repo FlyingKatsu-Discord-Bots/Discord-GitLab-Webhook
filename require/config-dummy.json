@@ -4,7 +4,8 @@
     "name": "GitLab Webhook Bot",
     "id": "",
     "token": "",
-    "prefix": ">"
+    "prefix": ">",
+    "debug_channel_id": ""
   },
   
   "webhook": {

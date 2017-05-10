@@ -50,7 +50,8 @@ The **package.json** file includes the following dependencies:
     "name": "GitLab Webhook Bot",
     "id": "THE 'Client ID' CREATED AT https://discordapp.com/developers/applications/me",
     "token": "THE 'Client Secret' CREATED AT https://discordapp.com/developers/applications/me",
-    "prefix": "YOUR CHOSEN COMMAND PREFIX"
+    "prefix": "YOUR CHOSEN COMMAND PREFIX",
+    "debug_channel_id": "Right-click > Copy ID in Discord [Dev Mode] of the channel you want to send error reports to. You MUST give the bot permission to send messages in this channel."
   },
   
   "webhook": {

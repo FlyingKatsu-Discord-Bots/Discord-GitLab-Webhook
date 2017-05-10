@@ -528,6 +528,37 @@ const SAMPLE = {
   fake_error: {type: "Fake Error", filename: "sample/unrelated.json"}
 };
 
+// Custom Error Handlers for DiscordAPI
+// Reply to the message with an error report
+function replyWithDiscordError(msg) {
+  // Return a function so that we can simply replace console.error with replyWithDiscordError(msg)
+  return function (e) {
+    if (msg) {
+      msg.reply(`encountered an error from DiscordAPI: ${e.message}`)
+        .then( (m) => {console.log(`Informed ${msg.author} of the API error: ${e.message}`)} )
+        .catch(console.error);
+    }
+    console.error(e);
+  }
+}
+// Mention User and send report to Debug Channel
+function shareDiscordError(user) {
+  // Return a function so that we can simply replace console.error with shareDiscordError(user)
+  let channel = CLIENT.channels.get(CONFIG.bot.debug_channel_id);
+  return function (e) {
+    if (user && channel) {
+      channel.send(`${user} encountered an error from DiscordAPI: ${e.message}`)
+        .then( (m) => {console.log(`[Via Debug Channel] Informed ${user} of the API error: ${e.message}`)} )
+        .catch(console.error);
+    } else if (channel) {
+      channel.send(`Someone encountered an error from DiscordAPI: ${e.message}`)
+        .then( (m) => {console.log(`[Via Debug Channel] Reported an API error: ${e.message}`)} )
+        .catch(console.error);
+    }
+    console.error(e);
+  }
+}
+
 
 const COMMANDS = {
   
@@ -554,16 +585,25 @@ const COMMANDS = {
       return;
     }
     
+    //console.log(channel.messages.size); // Only retrieves number of messages in cache (since bot started)
+    
+    // TODO: Find a better way of pre-checking number of messages available, maybe recursively?
+    /*let total = null;
+    channel.fetchMessages() // Limited to 50 at a time, so do this 4 times to get 200
+      .then( (collection) => { 
+        total = collection.size; 
+      } )
+      .catch(console.error);    
     // Set the number of messages to no more than the size of the channel's message collection
-    num = Math.min(num, channel.messages.size);
+    num = Math.min(num, total);
     if (num <= 2) {
       // Inform the user that there are not enough messages in the channel to bulk delete
-      msg.reply(`The channel ${channel} does not have enough messages in it for bulk delete to work. Needs at least 3 messages.`)
+      msg.reply(`The channel ${channel} only has ${total} messages. Needs at least 3 messages for bulk delete to work.`)
         .then( (m) => {console.log(`Informed ${msg.author} that the channel ${channel} had too few messages`)} )
         .catch(console.error);
       // End
       return;
-    }
+    }*/
     
     // Check if author is allowed to manage messages (8192 or 0x2000) in specified channel
     if ( channel.permissionsFor(msg.author).has(8192) ) {      
@@ -574,7 +614,7 @@ const COMMANDS = {
             .then( (m) => console.log(`Confirmed success of bulk delete in channel ${channel}`) )
             .catch(console.error) 
         } )
-        .catch(console.error);
+        .catch(shareDiscordError(msg.author));
       
     } else {
       // Inform the user that they are not permitted
@@ -684,6 +724,9 @@ CLIENT.on('ready', () => {
 
 // Create an event listener for messages
 CLIENT.on('message', msg => {
+  // Ignore messages from DMs, Gropu DMs, and Voice
+  if (msg.channel.type !== "text" ) return;
+  
   // Only read message if it starts with command prefix
   if (msg.content.startsWith(CONFIG.bot.prefix)) {
     
