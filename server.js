@@ -546,17 +546,28 @@ function shareDiscordError(user) {
   // Return a function so that we can simply replace console.error with shareDiscordError(user)
   let channel = CLIENT.channels.get(CONFIG.bot.debug_channel_id);
   return function (e) {
+    console.error(e);
     if (user && channel) {
       channel.send(`${user} encountered an error from DiscordAPI: ${e.message}`)
         .then( (m) => {console.log(`[Via Debug Channel] Informed ${user} of the API error: ${e.message}`)} )
-        .catch(console.error);
+        .catch( shareDiscordErrorFromSend(e) );
     } else if (channel) {
       channel.send(`Someone encountered an error from DiscordAPI: ${e.message}`)
         .then( (m) => {console.log(`[Via Debug Channel] Reported an API error: ${e.message}`)} )
-        .catch(console.error);
+        .catch( shareDiscordErrorFromSend(e) );
     }
-    console.error(e);
   }
+}
+// In case we cannot send messages, try going through the webhook
+function shareDiscordErrorFromSend(originalError) {
+  return function(e) {
+    console.error(e);
+    if (HOOK) {
+      HOOK.send(`[${CONFIG.bot.name}] Encountered an error while trying to send an error message to the Debug Channel.\nInitial Error: ${originalError.message}\nSubsequent Error: ${e.message}`)
+       .then( (m) => console.log(`Sent an error report via webhook`))
+       .catch(console.error);
+    }
+  }  
 }
 
 
@@ -569,7 +580,7 @@ const COMMANDS = {
       // Inform the user that this number is invalid
       msg.reply(`You must specify a number between 2 and 200, exclusive.`)
         .then( (m) => {console.log(`Informed ${msg.author} that the num messages to delete was invalid`)} )
-        .catch(console.error);
+        .catch( shareDiscordError(msg.author) );
       // End
       return;
     }
@@ -580,7 +591,7 @@ const COMMANDS = {
       // Inform the user that this channel is invalid
       msg.reply(`You must specify a text channel.`)
         .then( (m) => {console.log(`Informed ${msg.author} that the channel ${channel} was an invalid type ${channel.type}`)} )
-        .catch(console.error);
+        .catch( shareDiscordError(msg.author) );
       // End
       return;
     }
@@ -593,14 +604,14 @@ const COMMANDS = {
       .then( (collection) => { 
         total = collection.size; 
       } )
-      .catch(console.error);    
+      .catch( shareDiscordError(msg.author) );    
     // Set the number of messages to no more than the size of the channel's message collection
     num = Math.min(num, total);
     if (num <= 2) {
       // Inform the user that there are not enough messages in the channel to bulk delete
       msg.reply(`The channel ${channel} only has ${total} messages. Needs at least 3 messages for bulk delete to work.`)
         .then( (m) => {console.log(`Informed ${msg.author} that the channel ${channel} had too few messages`)} )
-        .catch(console.error);
+        .catch( shareDiscordError(msg.author) );
       // End
       return;
     }*/
@@ -614,13 +625,13 @@ const COMMANDS = {
             .then( (m) => console.log(`Confirmed success of bulk delete in channel ${channel}`) )
             .catch(console.error) 
         } )
-        .catch(shareDiscordError(msg.author));
+        .catch( shareDiscordError(msg.author) );
       
     } else {
       // Inform the user that they are not permitted
       msg.reply(`Sorry, but you are not permitted to manage messages in ${channel}`)
         .then( (m) => {console.log(`Informed ${msg.author} that they do not have permission to manage messages in ${channel}`)} )
-        .catch(console.error);
+        .catch( shareDiscordError(msg.author) );
     }
   },
   
