@@ -670,6 +670,23 @@ const COMMANDS = {
     }    
   },
   
+  disconnect: function(msg, arg) {
+    let time = (arg[0]) ? parseInt(arg[0]) : 5000;
+    time = ( isNaN(time) ) ? 5000 : time;
+    
+    // Verify that this user is allowed to disconnect the bot
+    if (msg.author.id == CONFIG.master_user_id) {
+      CLIENT.destroy()
+        .then( () => {
+          setTimeout( () => { console.log("finished user-specified timeout"); }, time); 
+        } )
+        .catch( shareDiscordError(msg.author, `[DISCONNECT] Destroying the client session`) );
+    } else {
+      msg.reply(`You're not allowed to disconnect the bot!'.`)
+        .catch( shareDiscordError(msg.author, `[DISCONNECT] Sending a reply [Not Permitted] to ${msg.author} in ${msg.channel}`) );
+    }    
+  },
+  
   ping: function(msg, arg) {
     msg.channel.send('pong')
       .catch( shareDiscordError(msg.author, `[PING] Sending a message to ${msg.channel}`) );
