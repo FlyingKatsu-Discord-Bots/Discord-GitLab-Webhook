@@ -85,7 +85,18 @@ export DGW_WEBHOOK_TOKEN=MySecretWebhookToken
 echo $DGW_WEBHOOK_TOKEN
 ```
 
-## Sending Local HTTP Requests
+## Sending Test HTTP Requests
+
+### Run the client script
+
+To test HTTP Requests, you can modify and use the client script, `ex-client.js`:
+
+```
+pm2 start server.js
+node ex-client.js
+```
+
+### Run cURL
 
 If you want to test HTTP Requests without a GitLab setup, you can use [cURL](https://curl.haxx.se/) to send fake requests with sample data:
 

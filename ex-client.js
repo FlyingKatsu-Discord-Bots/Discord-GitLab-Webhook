@@ -7,6 +7,7 @@ const querystring = require('querystring');
 
 // Import CONFIG file
 const CONFIG = require('./require/config.json');
+const SECRET = CONFIG.webhook.token || process.env.DGW_WEBHOOK_TOKEN || "";
 
 const postDataJSON = querystring.stringify(
   {
@@ -24,7 +25,9 @@ const options = function(type, data) {
     method: 'POST',
     headers: {
       'Content-Type': type,
-      'Content-Length': Buffer.byteLength(data)
+      'Content-Length': Buffer.byteLength(data),
+      'X-GitLab-Token': SECRET,
+      'X-GitLab-Event': "Test",
     }
   };
 };

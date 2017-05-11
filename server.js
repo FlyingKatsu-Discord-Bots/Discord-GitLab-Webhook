@@ -2,8 +2,8 @@
  * HTTP request handling based on
  * https://blog.kyletolle.com/using-node-js-to-inspect-webhook-calls/
  * Test it in a second client with cURL
- * curl -X POST localhost:9000 -H 'Content-Type: application/json' -d '{"payload":"test"}'
- * cat sample/unrelated.json | curl -i -v -X POST localhost:9000 -H "Content-Type: application/json" -H 'X-Gitlab-Token: TOKEN' -H 'X-Gitlab-Event: EVENT' --data-binary "@-"
+ * curl -X POST localhost:9000 -H 'Content-Type: text/plain' -d '{"payload":"test"}'
+ * cat sample/unrelated.json | curl -i -v -X POST localhost:9000 -H "Content-Type: text/plain" -H 'X-Gitlab-Token: TOKEN' -H 'X-Gitlab-Event: EVENT' --data-binary "@-"
  */
 
 // Import FS for reading sample files
@@ -91,10 +91,10 @@ function handler (req, res) {
     req.on('data', function(chunk) {
       
       console.log("reading...");
-      data += chunk;
+      //data += chunk;
       
       
-      /*if ( passChecked === false ) { // this data is already determined to be invalid
+      if ( passChecked === false ) { // this data is already determined to be invalid
         console.log("Data was invalid, skipping...");
         return;
         
@@ -171,7 +171,7 @@ function handler (req, res) {
           console.log("==== DESTROYED ====");
           return;
         }
-      }*/
+      }
 
     });
 
@@ -179,10 +179,8 @@ function handler (req, res) {
     req.on('end', function() {
       console.log("finishing up...");
       
-      if ( true ) {
-      //if ( passChecked ) {
+      if ( passChecked ) {
         // Let the sender know we received things alright
-        res.statusCode = 200;
         res.setHeader('Content-Type', 'application/json');
         let responseBody = {
           headers: headers,
@@ -194,21 +192,20 @@ function handler (req, res) {
         
         // Process Data
         try {
-          if (headers['content-type'] == "application/json")  {
-            if (!headers['x-gitlab-token']) data = {body: ""+data};
-            processData(type, data);
-          } else {
-            if (!headers['x-gitlab-token']) {
-              data = {body: ""+JSON.parse(data)};
-              processData(type, data);
-            } else {
-              processData(type, JSON.parse(data));
-            }
-          }          
+          console.log(data);
+          
+          // To accept everything as a string
+          //data = JSON.parse(JSON.stringify(data));
+          
+          // To read JSON as JSON and everything else as potential JSON
+          data = (headers['content-type'] == "application/json") ? data : JSON.parse(data);
+          
+          processData(type, data);
+          
         } catch (e) {
           console.log("Error Context: Data is not formatted as JSON");
           console.error(e);
-          processData("Known Error", { message: "Expected JSON, but received "+headers['content-type'], body: ""+data } );
+          processData("Known Error", { message: "Expected JSON, but received "+headers['content-type'], body: JSON.stringify(data) } );
         }
       }
       console.log("==== DONE ====");
@@ -511,12 +508,10 @@ function processData(type, data) {
         output.TITLE = `Type: ${type}`;
         output.DESCRIPTION =  `This feature is not yet implemented`;
         
-        if (data.body) {
-          output.FIELDS.push({
-            name: "Received Data",
-            value: data.body.substring(0,128)
-          });
-        }
+        output.FIELDS.push({
+          name: "Received Data",
+          value: JSON.stringify(data).substring(0,128)
+        });
         
         break;
     }
