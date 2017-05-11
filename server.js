@@ -74,6 +74,12 @@ function handler (req, res) {
   let type = '';
   let passChecked = null;
 
+  // Correctly format Response according to https://nodejs.org/en/docs/guides/anatomy-of-an-http-transaction/
+  let headers = req.headers;
+  let method = req.method;
+  let url = req.url;
+  let body = "";
+  
   // Only do stuff if the request came via POST
   if (req.method == "POST") {
 
@@ -111,7 +117,14 @@ function handler (req, res) {
             
             // send a Bad Request response
             statusCode = 400;
-            res.writeHead(statusCode, {'Content-Type': 'text/plain'});
+            res.writeHead(statusCode, {'Content-Type': 'application/json'});
+            let responseBody = {
+              headers: headers,
+              method: method,
+              url: url,
+              body: body
+            };
+            res.write(JSON.stringify(responseBody));
             res.end();
             
             // stop receiving request data
@@ -139,7 +152,14 @@ function handler (req, res) {
           
           // send a Bad Request response
           statusCode = 400;
-          res.writeHead(statusCode, {'Content-Type': 'text/plain'});
+          res.writeHead(statusCode, {'Content-Type': 'application/json'});
+          let responseBody = {
+            headers: headers,
+            method: method,
+            url: url,
+            body: body
+          };
+          res.write(JSON.stringify(responseBody));
           res.end();
           
           // stop receiving request data
@@ -157,7 +177,14 @@ function handler (req, res) {
       
       if ( passChecked ) {
         // Let the sender know we received things alright
-        res.writeHead(statusCode, {'Content-Type': 'text/plain'});
+        res.writeHead(statusCode, {'Content-Type': 'application/json'});
+        let responseBody = {
+          headers: headers,
+          method: method,
+          url: url,
+          body: body
+        };
+        res.write(JSON.stringify(responseBody));
         res.end();
         
         // Process Data
