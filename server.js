@@ -73,7 +73,7 @@ function handler (req, res) {
   
   // Keep track of incoming data
   let data = '';
-  let type = '';
+  let type = req.headers['content-type'];
   let passChecked = null;
 
   // Correctly format Response according to https://nodejs.org/en/docs/guides/anatomy-of-an-http-transaction/
@@ -193,7 +193,23 @@ function handler (req, res) {
         res.end( JSON.stringify(responseBody) );
         
         // Process Data
-        processData(type, JSON.parse(data));
+        try {
+          if (headers['content-type'] == "application/json")  {
+            if (!headers['x-gitlab-token']) data = {body: ""+data};
+            processData(type, data);
+          } else {
+            if (!headers['x-gitlab-token']) {
+              data = {body: ""+JSON.parse(data)};
+              processData(type, data);
+            } else {
+              processData(type, JSON.parse(data));
+            }
+          }          
+        } catch (e) {
+          console.log("Error Context: Data is not formatted as JSON");
+          console.error(e);
+          processData("Known Error", { message: "Expected JSON, but received "+headers['content-type'], body: ""+data } );
+        }
       }
       console.log("==== DONE ====");
     });
@@ -473,12 +489,35 @@ function processData(type, data) {
       case "Fake Error":
         console.log("# Invoked a Fake Error response.");
         output.DESCRIPTION = data.fake.error;
+        break;
+        
+      case "Known Error":
+        output.COLOR = ColorCodes.error;
+        output.TITLE = "Error Processing HTTP Request";
+        output.DESCRIPTION = data.message;
+        
+        if (data.body) {
+          output.FIELDS.push({
+            name: "Received Data",
+            value: data.body.substring(0,128)
+          });
+        }
+        
+        break;
         
       default:
         // TODO
         console.log("# Unhandled case! ", type);
         output.TITLE = `Type: ${type}`;
         output.DESCRIPTION =  `This feature is not yet implemented`;
+        
+        if (data.body) {
+          output.FIELDS.push({
+            name: "Received Data",
+            value: data.body.substring(0,128)
+          });
+        }
+        
         break;
     }
   } catch(e) {
