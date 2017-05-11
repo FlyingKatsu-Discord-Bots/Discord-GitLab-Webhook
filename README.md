@@ -46,6 +46,8 @@ git clone git@github.com:Warped2713/Discord-GitLab-Webhook.git
 cd discord-gitlab-webhook
 # install the app via NodeJS, using package.json
 npm install
+# install pm2
+npm install pm2@latest -g
 # update pm2
 pm2 update
 ```
