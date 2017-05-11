@@ -589,7 +589,7 @@ const COMMANDS = {
   clear: function(msg, arg) {    
     // Get the number of messages (first arg)
     let num = (arg[0]) ? parseInt(arg[0]) : 0;
-    if ( !num || num <= 2 || num >= 200 ) {
+    if ( isNaN(num) || num <= 2 || num >= 200 ) {
       // Inform the user that this number is invalid
       msg.reply(`You must specify a number between 2 and 200, exclusive.`)
         .then( (m) => {console.log(`Informed ${msg.author} that the num messages to delete was invalid`)} )
