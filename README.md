@@ -4,6 +4,7 @@
 
 A Discord bot for using webhooks with GitLab (and extendable for other custom webhooks not yet built into Discord).
 
+![Preview of embed messages sent via webhook](preview.png "WebHook Embed Preview")
 
 ## GitLab Event Support
 * Push Events
