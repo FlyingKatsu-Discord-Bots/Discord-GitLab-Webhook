@@ -97,7 +97,7 @@ Deletes the specified number of messages from the mentioned channel.  Only messa
 
 `>disconnect TIME`
 
-Tell the bot to stay logged out for TIME milliseconds.  The bot should automatically log itself back in after TIME is up.  Only a master user is allowed to use this command.
+Tell the bot to stay logged out for TIME milliseconds (default is 5 seconds, max is 1 hour).  The bot should automatically log itself back in after TIME is up.  Only a master user is allowed to use this command.
 
 
 ### Embed Sample Data

@@ -24,18 +24,18 @@ const BOT_SECRET = CONFIG.bot.token || process.env.DGW_BOT_TOKEN || "";
  * Set up states and timers
  * ========================================= */
 var storedData = [];
-
+var userTimerEnabled = false;
+var disconnectHandled = false;
+var readyMsg = `${CONFIG.bot.name} is online and ready to receive data`;
 
 /* ============================================
  * Timer to check if disconnected from Discord
  * ========================================= */
-var disconnectHandled = false;
-var readyMsg = `${CONFIG.bot.name} is online and ready to receive data`;
 
 var checkDisconnect = function() {
   //console.log("### Routine check client.status: " + CLIENT.status + "; uptime: " + CLIENT.uptime);
   // if connection is lost, 
-  if ( !disconnectHandled && CLIENT.status == 5 ) {
+  if ( !userTimerEnabled && !disconnectHandled && CLIENT.status == 5 ) {
     // set disconnectHandled
     disconnectHandled = true;
     // set ready message to "Recovering from unexpected shutdown"
@@ -459,11 +459,7 @@ function processData(type, data) {
   }
     
   // Send data via webhook
-  if (CLIENT.status == 0) {
-    sendData(output);
-  } else {
-    storedData.push(output);
-  }
+  sendData(output);
 }
 
 function sendData(input) {
@@ -483,11 +479,14 @@ function sendData(input) {
     timestamp: input.TIME || new Date()
   };
   
-  HOOK.send("", {embeds: [embed]})
+  // Only send data if client is ready
+  if (CLIENT.status == 0) {
+    HOOK.send("", {embeds: [embed]})
       .then( (message) => console.log(`Sent embed`))
       .catch( shareDiscordError(null, `[sendData] Sending an embed via WebHook: ${HOOK.name}`) );
-  
-  //console.log(embed);
+  } else {
+    storedData.push(embed);
+  }
 }
 
 
@@ -673,16 +672,26 @@ const COMMANDS = {
   disconnect: function(msg, arg) {
     let time = (arg[0]) ? parseInt(arg[0]) : 5000;
     time = ( isNaN(time) ) ? 5000 : time;
+    time = Math.min(Math.max(time, 5000), 3600000);
     
     // Verify that this user is allowed to disconnect the bot
-    if (msg.author.id == CONFIG.master_user_id) {
+    if (msg.author.id == CONFIG.bot.master_user_id) {
+      userTimerEnabled = true;
+      
+      msg.reply(`Taking bot offline for ${time} ms.  Any commands will be ignored until after that time, but the server will still attempt to listen for HTTP requests.`)
+        .catch( shareDiscordError(msg.author, `[DISCONNECT:${time}] Sending a reply [Success] to ${msg.author} in ${msg.channel}`) );
+      
       CLIENT.destroy()
         .then( () => {
-          setTimeout( () => { console.log("finished user-specified timeout"); }, time); 
+          setTimeout( () => { 
+            userTimerEnabled = false;
+            console.log("finished user-specified timeout");
+          }, time); 
         } )
         .catch( shareDiscordError(msg.author, `[DISCONNECT] Destroying the client session`) );
+      
     } else {
-      msg.reply(`You're not allowed to disconnect the bot!'.`)
+      msg.reply(`You're not allowed to disconnect the bot!`)
         .catch( shareDiscordError(msg.author, `[DISCONNECT] Sending a reply [Not Permitted] to ${msg.author} in ${msg.channel}`) );
     }    
   },
@@ -752,7 +761,8 @@ CLIENT.on('ready', () => {
     let numStored = storedData.length;
     for (let i = 0; i < numStored; i++) {
       let status = (i+1) + "/" + numStored;
-      HOOK.send("Recovered data " + status, numStored.pop())
+      let embed = storedData.pop();
+      HOOK.send( "Recovered data " + status, {embeds: [embed]} )
         .then( (message) => console.log(`Send stored embed`))
         .catch( shareDiscordError(null, `[onReady] Sending recovered embed [${status}] via WebHook: ${HOOK.name}`) );
     }
