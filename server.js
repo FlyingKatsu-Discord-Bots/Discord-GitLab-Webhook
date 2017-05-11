@@ -23,6 +23,7 @@ const BOT_SECRET = CONFIG.bot.token || process.env.DGW_BOT_TOKEN || "";
 /* ============================================
  * Set up states and timers
  * ========================================= */
+var storedData = [];
 
 
 /* ============================================
@@ -204,7 +205,8 @@ function processData(type, data) {
     AVATAR_URL: "",
     PERMALINK: "",
     DESCRIPTION: "",
-    FIELDS: []
+    FIELDS: [],
+    TIME: new Date()
   };
   
   try {
@@ -446,13 +448,18 @@ function processData(type, data) {
         break;
     }
   } catch(e) {
+    console.log("Error Context: processing data of an HTTP request. Type: " + type);
     console.error(e);
-    output.TITLE = "ERROR"
-    output.DESCRIPTION = "Unable to complete processing data from an HTTP request.  Check console log for details.";
+    output.TITLE = "Error Reading HTTP Request Data: " + type;
+    output.DESCRIPTION = e.message;
   }
     
   // Send data via webhook
-  sendData(output);
+  if (CLIENT.status == 0) {
+    sendData(output);
+  } else {
+    storedData.push(output);
+  }
 }
 
 function sendData(input) {
@@ -469,12 +476,12 @@ function sendData(input) {
     url: input.PERMALINK,
     description: input.DESCRIPTION,
     fields: input.FIELDS || {},
-    timestamp: new Date()
+    timestamp: input.TIME || new Date()
   };
   
   HOOK.send("", {embeds: [embed]})
       .then( (message) => console.log(`Sent embed`))
-      .catch(console.log);
+      .catch( shareDiscordError(null, `[sendData] Sending an embed via WebHook: ${HOOK.name}`) );
   
   //console.log(embed);
 }
@@ -719,6 +726,16 @@ CLIENT.on('ready', () => {
     HOOK.send(readyMsg)
       .then( (message) => console.log(`Sent message: ${message.content}`))
       .catch( shareDiscordError(null, `[onReady] Sending message [${readyMsg}] via WebHook: ${HOOK.name}`) );
+    
+    // Process stored data
+    let numStored = storedData.length;
+    for (let i = 0; i < numStored; i++) {
+      let status = (i+1) + "/" + numStored;
+      HOOK.send("Recovered data " + status, numStored.pop())
+        .then( (message) => console.log(`Send stored embed`))
+        .catch( shareDiscordError(null, `[onReady] Sending recovered embed [${status}] via WebHook: ${HOOK.name}`) );
+    }
+    
   } else {
     
     HOOK.send(readyMsg)
