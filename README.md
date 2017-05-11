@@ -4,6 +4,22 @@
 
 A Discord bot for using webhooks with GitLab (and extendable for other custom webhooks not yet built into Discord).
 
+
+## GitLab Event Support
+* Push Events
+* Issue Events
+* Comment Events
+    * Commits
+    * Merge Requests
+    * Issues
+    * Code Snippets
+* Merge Request Events
+* Wiki Page Events
+* Tag Events (Not yet)
+* Pipeline Events (Not yet)
+* Build Events (Not yet)
+
+
 ## Installation
 
 1. Clone this repo
@@ -65,23 +81,21 @@ export DGW_WEBHOOK_TOKEN=MySecretWebhookToken
 echo $DGW_WEBHOOK_TOKEN
 ```
 
+## Sending Local HTTP Requests
 
-## GitLab Event Support
-* Push Events
-* Tag Events (Not yet)
-* Issue Events
-* Comment Events
-    * Commits
-    * Merge Requests
-    * Issues
-    * Code Snippets
-* Merge Request Events
-* Wiki Page Events
-* Pipeline Events (Not yet)
-* Build Events (Not yet)
+If you want to test HTTP Requests without a GitLab setup, you can use [cURL](https://curl.haxx.se/) to send fake requests with sample data:
+
+```
+cat sample/push.json | curl -i -v -X POST localhost:9000 -H "Content-Type: application/json" -H 'X-Gitlab-Token: TOKEN' -H 'X-Gitlab-Event: Push Hook' --data-binary "@-"
+```
+
+* `sample/push.json` refers to the sample data in the local repo
+* `localhost:9000` corresponds to the server.address and server.port in your config file
+* `TOKEN` is your webhook.token or environment variable DGW_WEBHOOK_TOKEN that you get from Discord when you create/edit a webhook
+* `Push Hook` is the event that corresponds to the type of data you send, in this case, a [GitLab Push Hook](https://docs.gitlab.com/ce/user/project/integrations/webhooks.html#push-events)
 
 
-## Commands
+## Bot Commands
 
 ### Clear (Bulk Delete) Messages
 
@@ -97,7 +111,7 @@ Deletes the specified number of messages from the mentioned channel.  Only messa
 
 `>disconnect TIME`
 
-Tell the bot to stay logged out for TIME milliseconds (default is 5 seconds, max is 1 hour).  The bot should automatically log itself back in after TIME is up.  Only a master user is allowed to use this command.
+Tell the bot to stay logged out for TIME milliseconds (default is 5 seconds, max is 1 hour).  The bot should automatically log itself back in after TIME is up.  Only a master user is allowed to use this command. No commands will be processed during the timeout, but the server will still attempt to listen for incoming HTTP requests (which the bot will try to process when it logs back in).
 
 
 ### Embed Sample Data
