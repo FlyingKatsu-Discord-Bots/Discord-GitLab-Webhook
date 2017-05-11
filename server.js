@@ -23,7 +23,7 @@ const BOT_SECRET = CONFIG.bot.token || process.env.WEBHOOK_BOT_TOKEN || "";
 /* ============================================
  * Set up states and timers
  * ========================================= */
-var readyToReceive = false;
+
 
 /* ============================================
  * Timer to check if disconnected from Discord
@@ -542,28 +542,30 @@ function replyWithDiscordError(msg) {
   }
 }
 // Mention User and send report to Debug Channel
-function shareDiscordError(user) {
+function shareDiscordError(user, context) {
   // Return a function so that we can simply replace console.error with shareDiscordError(user)
   let channel = CLIENT.channels.get(CONFIG.bot.debug_channel_id);
   return function (e) {
+    console.log("Error Context: " + context);
     console.error(e);
     if (user && channel) {
-      channel.send(`${user} encountered an error from DiscordAPI: ${e.message}`)
-        .then( (m) => {console.log(`[Via Debug Channel] Informed ${user} of the API error: ${e.message}`)} )
-        .catch( shareDiscordErrorFromSend(e) );
+      channel.send(`${user} encountered an error from DiscordAPI...\nContext: ${context}\nError: ${e.message}`)
+        .then( (m) => {console.log(`[Via Debug Channel] Informed ${user} of the API Error ${e.code} during ${context}`)} )
+        .catch( shareDiscordErrorFromSend(e, context, `[ERROR] Sending error message to ${user} in ${channel}`) );
     } else if (channel) {
-      channel.send(`Someone encountered an error from DiscordAPI: ${e.message}`)
-        .then( (m) => {console.log(`[Via Debug Channel] Reported an API error: ${e.message}`)} )
-        .catch( shareDiscordErrorFromSend(e) );
+      channel.send(`Someone encountered an error from DiscordAPI...\nContext: ${context}\nError: ${e.message}`)
+        .then( (m) => {console.log(`[Via Debug Channel] Reported an API Error ${e.code} during ${context}`)} )
+        .catch( shareDiscordErrorFromSend(e, context, `[ERROR] Sending error message to ${channel}`) );
     }
   }
 }
 // In case we cannot send messages, try going through the webhook
-function shareDiscordErrorFromSend(originalError) {
+function shareDiscordErrorFromSend(originalError, originalContext, context) {
   return function(e) {
+    console.log("Error Context: " + context);
     console.error(e);
     if (HOOK) {
-      HOOK.send(`[${CONFIG.bot.name}] Encountered an error while trying to send an error message to the Debug Channel.\nInitial Error: ${originalError.message}\nSubsequent Error: ${e.message}`)
+      HOOK.send(`[${CONFIG.bot.name}] encountered an error...\nInitial Context: ${originalContext}\nInitial Error: ${originalError.message}\nSubsequent Context: ${context}\nSubsequent Error: ${e.message}`)
        .then( (m) => console.log(`Sent an error report via webhook`))
        .catch(console.error);
     }
@@ -580,7 +582,7 @@ const COMMANDS = {
       // Inform the user that this number is invalid
       msg.reply(`You must specify a number between 2 and 200, exclusive.`)
         .then( (m) => {console.log(`Informed ${msg.author} that the num messages to delete was invalid`)} )
-        .catch( shareDiscordError(msg.author) );
+        .catch( shareDiscordError(msg.author, `[CLEAR:${num}] Sending a reply [Argument Must Be in (2,200)] to ${msg.author} in ${msg.channel}`) );
       // End
       return;
     }
@@ -591,7 +593,7 @@ const COMMANDS = {
       // Inform the user that this channel is invalid
       msg.reply(`You must specify a text channel.`)
         .then( (m) => {console.log(`Informed ${msg.author} that the channel ${channel} was an invalid type ${channel.type}`)} )
-        .catch( shareDiscordError(msg.author) );
+        .catch( shareDiscordError(msg.author, `[CLEAR:${channel}] Sending a reply [Please Specify a TextChannel] to ${msg.author} in ${msg.channel}`) );
       // End
       return;
     }
@@ -604,14 +606,14 @@ const COMMANDS = {
       .then( (collection) => { 
         total = collection.size; 
       } )
-      .catch( shareDiscordError(msg.author) );    
+      .catch( shareDiscordError(msg.author, `[CLEAR] Fetching messages in channel ${channel}`) );    
     // Set the number of messages to no more than the size of the channel's message collection
     num = Math.min(num, total);
     if (num <= 2) {
       // Inform the user that there are not enough messages in the channel to bulk delete
       msg.reply(`The channel ${channel} only has ${total} messages. Needs at least 3 messages for bulk delete to work.`)
         .then( (m) => {console.log(`Informed ${msg.author} that the channel ${channel} had too few messages`)} )
-        .catch( shareDiscordError(msg.author) );
+        .catch( shareDiscordError(msg.author, `[CLEAR:${num},${channel}] Sending a reply [Message Count Mismatch] to ${msg.author} in ${msg.channel}`) );
       // End
       return;
     }*/
@@ -623,40 +625,48 @@ const COMMANDS = {
         .then( (collection) => { 
           msg.reply(`Successfully deleted ${collection.size} recent messages (from within the past 2 weeks) in ${channel}`)
             .then( (m) => console.log(`Confirmed success of bulk delete in channel ${channel}`) )
-            .catch(console.error) 
+            .catch( shareDiscordError(msg.author, `[CLEAR:${num},${channel}] Sending a reply [Success] to ${msg.author} in ${msg.channel}`) ) 
         } )
-        .catch( shareDiscordError(msg.author) );
+        .catch( shareDiscordError(msg.author, `[CLEAR:${num},${channel}] Using bulkDelete(${num}, filterOld=true) in ${channel}`) );
       
     } else {
       // Inform the user that they are not permitted
       msg.reply(`Sorry, but you are not permitted to manage messages in ${channel}`)
         .then( (m) => {console.log(`Informed ${msg.author} that they do not have permission to manage messages in ${channel}`)} )
-        .catch( shareDiscordError(msg.author) );
+        .catch( shareDiscordError(msg.author, `[CLEAR:${num},${channel}] Sending a reply [User Not Permitted] to ${msg.author} in ${msg.channel}`) );
     }
   },
   
   embed: function(msg, arg) {
-    if ( SAMPLE.hasOwnProperty(arg) ) {      
-      FS.readFile(SAMPLE[arg].filename, 'utf8', function (err, data) {
+    let key = (arg[0]) ? arg[0] : "";
+    
+    if ( key != "" && SAMPLE.hasOwnProperty(key) ) {      
+      FS.readFile(SAMPLE[key].filename, 'utf8', function (err, data) {
         if (err) {
+          console.log("Error Context: Reading a file " + key);
           console.error(err);
-          msg.channel.send(`There was a problem loading the sample data: ${arg}`).catch(console.log);
+          msg.reply(`There was a problem loading the sample data: ${key}`)
+            .catch( shareDiscordError(msg.author, `[EMBED:${key}] Sending a reply [Error Reading File] to ${msg.author} in ${msg.channel}`) );
         } else {
-          msg.channel.send(`Sending a sample embed: ${arg}`).catch(console.log);
-          processData(SAMPLE[arg].type, JSON.parse(data));
+          msg.reply(`Sending a sample embed: ${arg}`)
+            .catch( shareDiscordError(msg.author, `[EMBED:${key}] Sending a reply [Success] to ${msg.author} in ${msg.channel}`) );
+          processData(SAMPLE[key].type, JSON.parse(data));
         }        
       });      
     } else {
-      msg.channel.send(`Not a recognized argument`).catch(console.log);
+      msg.reply(`Not a recognized argument`)
+        .catch( shareDiscordError(msg.author, `[EMBED:null] Sending a reply [Invalid Argument] to ${msg.author} in ${msg.channel}`) );
     }    
   },
   
   ping: function(msg, arg) {
-    msg.channel.send('pong').catch(console.log);
+    msg.channel.send('pong')
+      .catch( shareDiscordError(msg.author, `[PING] Sending a message to ${msg.channel}`) );
   },
   
   test: function(msg, arg) {
-    msg.channel.send('Sending a sample embed').catch(console.log);
+    msg.reply('Sending a sample embed')
+      .catch( shareDiscordError(msg.author, `[TEST] Sending a reply to ${msg.author} in ${msg.channel}`) );
     
     let embed = {
       color: 3447003,
@@ -690,7 +700,7 @@ const COMMANDS = {
 
     HOOK.send("", {embeds: [embed]})
       .then( (message) => console.log(`Sent test embed`))
-      .catch(console.log);
+      .catch( shareDiscordError(msg.author, `[TEST] Sending a message via WebHook ${HOOK.name}`) );
   }
   
 };
@@ -708,12 +718,12 @@ CLIENT.on('ready', () => {
     disconnectHandled = false;
     HOOK.send(readyMsg)
       .then( (message) => console.log(`Sent message: ${message.content}`))
-      .catch(console.log);
+      .catch( shareDiscordError(null, `[onReady] Sending message [${readyMsg}] via WebHook: ${HOOK.name}`) );
   } else {
     
     HOOK.send(readyMsg)
       .then( (message) => console.log(`Sent message: ${message.content}`))
-      .catch(console.log);
+      .catch( shareDiscordError(null, `[onReady] Sending message [${readyMsg}] via WebHook: ${HOOK.name}`) );
     
     if (!app.listening) {
       // Start listening for HTTP requests
@@ -722,10 +732,10 @@ CLIENT.on('ready', () => {
         CONFIG.webhook.server.address,
         () => { 
           console.log( "Ready to listen at ", app.address() );
-          readyToReceive = true;
+          
           HOOK.send("Ready to listen for HTTP requests")
             .then( (message) => console.log(`Sent message: ${message.content}`))
-            .catch(console.log);
+            .catch( shareDiscordError(null, `[onListen] Sending message [Ready to Listen] via WebHook: ${HOOK.name}`) );
         });
     }
     
