@@ -168,6 +168,7 @@ function handler (req, res) {
     
     // Error Handler
     req.on('error', function(e){
+      console.log("Error Context: handling an HTTP request");
       console.error(e);
     });
 
@@ -188,6 +189,7 @@ const ColorCodes = {
   merge_request_closed: 2530048, // green
   merge_request_comment: 15749300, // pink
   default: 5198940, // grey
+  error: 16773120 // yellow
 };
 
 
@@ -450,6 +452,8 @@ function processData(type, data) {
   } catch(e) {
     console.log("Error Context: processing data of an HTTP request. Type: " + type);
     console.error(e);
+    
+    output.COLOR = ColorCodes.error;
     output.TITLE = "Error Reading HTTP Request Data: " + type;
     output.DESCRIPTION = e.message;
   }
