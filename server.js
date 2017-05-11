@@ -64,11 +64,13 @@ const HOOK = new DISCORD.WebhookClient(CONFIG.webhook.id, CONFIG.webhook.token);
 
 // Create our local webhook-receiving server
 var app = HTTP.createServer(handler);
-var statusCode = 200;
 
 // Handler for receiving HTTP requests
 function handler (req, res) {
-      
+  
+  // Assume it's all good at first...
+  var statusCode = 200;
+  
   // Keep track of incoming data
   let data = '';
   let type = '';
@@ -89,8 +91,10 @@ function handler (req, res) {
     req.on('data', function(chunk) {
       
       console.log("reading...");
+      data += chunk;
       
-      if ( passChecked === false ) { // this data is already determined to be invalid
+      
+      /*if ( passChecked === false ) { // this data is already determined to be invalid
         console.log("Data was invalid, skipping...");
         return;
         
@@ -167,7 +171,7 @@ function handler (req, res) {
           console.log("==== DESTROYED ====");
           return;
         }
-      }
+      }*/
 
     });
 
@@ -175,17 +179,18 @@ function handler (req, res) {
     req.on('end', function() {
       console.log("finishing up...");
       
-      if ( passChecked ) {
+      if ( true ) {
+      //if ( passChecked ) {
         // Let the sender know we received things alright
-        res.writeHead(statusCode, {'Content-Type': 'application/json'});
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'application/json');
         let responseBody = {
           headers: headers,
           method: method,
           url: url,
           body: body
         };
-        res.write(JSON.stringify(responseBody));
-        res.end();
+        res.end( JSON.stringify(responseBody) );
         
         // Process Data
         processData(type, JSON.parse(data));
