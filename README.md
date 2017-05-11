@@ -93,6 +93,13 @@ Deletes the specified number of messages from the mentioned channel.  Only messa
 * #CHANNEL must be a valid text channel in your guild/server
 
 
+### Disconnect Bot
+
+`>disconnect TIME`
+
+Tell the bot to stay logged out for TIME milliseconds.  The bot should automatically log itself back in after TIME is up.  Only a master user is allowed to use this command.
+
+
 ### Embed Sample Data
 
 `>embed TYPE`
