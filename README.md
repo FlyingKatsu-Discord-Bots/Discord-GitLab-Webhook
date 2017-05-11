@@ -65,7 +65,7 @@ The **package.json** file includes the following dependencies:
 4. Authorize your Discord Bot for your server using `https://discordapp.com/oauth2/authorize?client_id={YOUR_CLIENT_ID}&scope=bot&permissions={YOUR_CALCULATED_PERMISSIONS}` NOTE: if you get "Unexpected Error" then you probably forgot to turn your Discord App into a Bot User in Step 2.
 5. In your local bot repo, copy the dev/require/config-dummy.json to dev/require/config.json and fill in the data according to the instructions
 6. In your local GitLab server, set up a new webhook using your chosen URL (server.address:server.port), and the DGW_WEBHOOK_TOKEN (or webhook.token) specified in your config file.
-7. Run the bot using `pm2 start bot --name Discord-GitLab-Webhook`
+7. Run the bot using `pm2 start server.js --name dgw-bot` or simply `node server.js` if you don't want to use pm2
 8. Test the webhook by clicking the 'Test' button in GitLab's integrations page
 
 ### Using Environment Variables for Secret Tokens (optional)
