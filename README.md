@@ -28,7 +28,8 @@ A Discord bot for using webhooks with GitLab (and extendable for other custom we
 3. Navigate to the cloned repo
 4. Initialize the NodeJS app with npm install
 5. All of the dependencies listed in **package.json** should automatically be installed to **node_modules/**
-6. Update pm2
+6. Install [pm2](http://pm2.keymetrics.io/) using `npm install pm2@latest -g`
+7. Update pm2
 
 ### Command Line Summary
 
