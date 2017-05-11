@@ -367,11 +367,11 @@ function processData(type, data) {
         switch( data.object_attributes.action ) {
           case "open": 
             output.COLOR = ColorCodes.merge_request_opened;
-            output.TITLE = `[${data.object_attributes.target.path_with_namespace}] Merge Request Opened: ${data.object_attributes.iid} ${data.object_attributes.title}`;
+            output.TITLE = `[${data.object_attributes.target.path_with_namespace}] Merge Request Opened: #${data.object_attributes.iid} ${data.object_attributes.title}`;
             break;
           case "close":
             output.COLOR = ColorCodes.merge_request_closed;
-            output.TITLE = `[${data.object_attributes.target.path_with_namespace}] Merge Request Closed: ${data.object_attributes.iid} ${data.object_attributes.title}`;
+            output.TITLE = `[${data.object_attributes.target.path_with_namespace}] Merge Request Closed: #${data.object_attributes.iid} ${data.object_attributes.title}`;
             break;
           default:
             output.COLOR = ColorCodes.merge_request_comment;
