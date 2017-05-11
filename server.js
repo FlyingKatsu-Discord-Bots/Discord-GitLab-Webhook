@@ -17,8 +17,8 @@ const DISCORD = require('discord.js');
 
 // Import CONFIG file
 const CONFIG = require('./require/config.json');
-const SECRET = CONFIG.webhook.token || process.env.GITLAB_TOKEN || "";
-const BOT_SECRET = CONFIG.bot.token || process.env.WEBHOOK_BOT_TOKEN || "";
+const SECRET = CONFIG.webhook.token || process.env.DGW_WEBHOOK_TOKEN || "";
+const BOT_SECRET = CONFIG.bot.token || process.env.DGW_BOT_TOKEN || "";
 
 /* ============================================
  * Set up states and timers

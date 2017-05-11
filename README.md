@@ -1,9 +1,11 @@
 [![Discord Server](https://discordapp.com/api/guilds/310097366759768065/embed.png)](https://discord.gg/tZWqhWd)
 
 # Discord-GitLab Webhook Bot
+
 A Discord bot for using webhooks with GitLab (and extendable for other custom webhooks not yet built into Discord).
 
 ## Installation
+
 1. Clone this repo
 2. Install [NodeJS](https://nodejs.org/en/download/)
 3. Navigate to the cloned repo
@@ -12,6 +14,7 @@ A Discord bot for using webhooks with GitLab (and extendable for other custom we
 6. Update pm2
 
 ### Command Line Summary
+
 ```
 # make a parent directory for containing the repo, if desired
 mkdir my_bots
@@ -30,6 +33,7 @@ pm2 update
 ```
 
 ### Dependencies
+
 The **package.json** file includes the following dependencies:
 * [discordJS](https://github.com/hydrabolt/discord.js/) for integrating with Discord
     * [erlpack](https://github.com/hammerandchisel/erlpack) for much faster websockets
@@ -37,51 +41,29 @@ The **package.json** file includes the following dependencies:
 
 
 ## Configuration
-1. Create your Discord Bot at https://discordapp.com/developers/applications/me (keep this tab open so you can easily access Client ID and Client Secret)
+
+1. Create your Discord Bot at https://discordapp.com/developers/applications/me Keep this tab open so you can easily access Client ID and Client Secret
 2. Make your Discord app a Bot User by clicking the "Create Bot User" button in your app page settings.
 3. Calculated the desired permissions for your bot at https://discordapi.com/permissions.html (or use the default 536964096)
 4. Authorize your Discord Bot for your server using `https://discordapp.com/oauth2/authorize?client_id={YOUR_CLIENT_ID}&scope=bot&permissions={YOUR_CALCULATED_PERMISSIONS}` NOTE: if you get "Unexpected Error" then you probably forgot to turn your Discord App into a Bot User in Step 2.
-5. In your local bot repo, rename the dev/require/config-dummy.json to dev/require/config.json
-6. Fill in the data as follows:
-```json
-{
-  
-  "bot": {
-    "name": "GitLab Webhook Bot",
-    "id": "THE 'Client ID' CREATED AT https://discordapp.com/developers/applications/me",
-    "token": "THE 'Client Secret' CREATED AT https://discordapp.com/developers/applications/me",
-    "prefix": "YOUR CHOSEN COMMAND PREFIX",
-    "debug_channel_id": "Right-click > Copy ID in Discord [Dev Mode] of the channel you want to send error reports to. You MUST give the bot permission to send messages in this channel."
-  },
-  
-  "webhook": {
-    "id": "{ID} FROM https://discordapp.com/api/webhooks/{ID}/{TOKEN} WHICH IS GENEREATED WHEN YOU CREATE A WEBHOOK IN DISCORD",
-    "token": "{TOKEN} FROM https://discordapp.com/api/webhooks/{ID}/{TOKEN} (USE THIS FOR GITLAB'S SECRET TOKEN BOX)",
-    "server": {
-      "address": "localhost",
-      "port": "8000"
-    }
-  }
+5. In your local bot repo, copy the dev/require/config-dummy.json to dev/require/config.json and fill in the data according to the instructions
+6. In your local GitLab server, set up a new webhook using your chosen URL (server.address:server.port), and the DGW_WEBHOOK_TOKEN (or webhook.token) specified in your config file.
+7. Run the bot using `pm2 start bot --name Discord-GitLab-Webhook`
+8. Test the webhook by clicking the 'Test' button in GitLab's integrations page
 
-}
+### Using Environment Variables for Secret Tokens (optional)
+
+Instead of keeping your secret tokens in a file, you can choose to set up environment variables and export them for use with the bot script
 
 ```
-7. [Optional] Instead of keeping your tokens in a file, you can choose to set up environment variables and export them for use with the bot script
-```
-echo $WEBHOOK_BOT_TOKEN
-export WEBHOOK_BOT_TOKEN=MySecretDiscordBotToken
-echo $WEBHOOK_BOT_TOKEN
+echo $DGW_BOT_TOKEN
+export DGW_BOT_TOKEN=MySecretDiscordBotToken
+echo $DGW_BOT_TOKEN
 
-echo $GITLAB_TOKEN
-export GITLAB_TOKEN=MySecretWebhookToken
-echo $GITLAB_TOKEN
+echo $DGW_WEBHOOK_TOKEN
+export DGW_WEBHOOK_TOKEN=MySecretWebhookToken
+echo $DGW_WEBHOOK_TOKEN
 ```
-8. In your local GitLab server, set up a new webhook using your chosen host, port, and the GITLAB_TOKEN specified in step 7.
-9. Run the bot
-```
-pm2 start bot --name Discord-GitLab-Webhook
-```
-10. Test the webhook by clicking the 'Test' button in GitLab
 
 
 ## GitLab Event Support
@@ -97,3 +79,50 @@ pm2 start bot --name Discord-GitLab-Webhook
 * Wiki Page Events
 * Pipeline Events (Not yet)
 * Build Events (Not yet)
+
+
+## Commands
+
+### Clear (Bulk Delete) Messages
+
+`>clear NUM #CHANNEL`
+
+Deletes the specified number of messages from the mentioned channel.  Only messages from the most recent two weeks will be deleted, as specified by the DiscordAPI.  Both the bot and the user must have permission to "Manage Messages" for the specified channel.  Also replies to the user to acknowledge receiving the command.
+
+* NUM must be a number greater than 2 and less than 200
+* #CHANNEL must be a valid text channel in your guild/server
+
+
+### Embed Sample Data
+
+`>embed TYPE`
+
+Sends an embedded message via webhook, using data read from the specified sample file. Also replies to the user to acknowledge receiving the command.
+
+TYPE must be one of the properties of the SAMPLE object:
+* `build`  Reads from `sample/build.json`, which is the body of a [GitLab Build Hook](https://docs.gitlab.com/ce/user/project/integrations/webhooks.html#build-events)
+* `issue`  Reads from `sample/issue.json`, which is the body of a [GitLab Issue Hook](https://docs.gitlab.com/ce/user/project/integrations/webhooks.html#issues-events)
+* `merge`  Reads from `sample/merge.json`, which is the body of a [GitLab Merge Request Hook](https://docs.gitlab.com/ce/user/project/integrations/webhooks.html#merge-request-events)
+* `commit_comment`  Reads from `sample/note-commit.json`, which is the body of a [GitLab Note Hook for Commits](https://docs.gitlab.com/ce/user/project/integrations/webhooks.html#comment-on-commit)
+* `issue_comment`  Reads from `sample/note-comment.json`, which is the body of a [GitLab Note Hook for Issues](https://docs.gitlab.com/ce/user/project/integrations/webhooks.html#comment-on-issue)
+* `merge_comment`  Reads from `sample/note-merge.json`, which is the body of a [GitLab Note Hook for Merge Requests](https://docs.gitlab.com/ce/user/project/integrations/webhooks.html#comment-on-merge-request)
+* `snippet`  Reads from `sample/note-snippet.json`, which is the body of a [GitLab Note Hook for Code Snippets](https://docs.gitlab.com/ce/user/project/integrations/webhooks.html#comment-on-code-snippet)
+* `pipeline`  Reads from `sample/pipeline.json`, which is the body of a [GitLab Pipeline Hook](https://docs.gitlab.com/ce/user/project/integrations/webhooks.html#pipeline-events)
+* `push`  Reads from `sample/push.json`, which is the body of a [GitLab Push Hook](https://docs.gitlab.com/ce/user/project/integrations/webhooks.html#push-events)
+* `tag`  Reads from `sample/tag.json`, which is the body of a [GitLab Tag Hook](https://docs.gitlab.com/ce/user/project/integrations/webhooks.html#tag-events)
+* `wiki`  Reads from `sample/wiki.json`, which is the body of a [GitLab Wiki Page Hook](https://docs.gitlab.com/ce/user/project/integrations/webhooks.html#wiki-page-events)
+* `unrelated`  Reads from `sample/unrelated.json`, which is just [random JSON data](http://www.json-generator.com/)
+* `fake_error`  Purposefully attempts to read undefined data in order to test the error handler
+
+
+### Ping-Pong
+
+`>ping`
+
+Sends "pong" to the same channel in which the command was called.
+
+### Test Embed
+
+`>test`
+
+Sends an embedded message via webhook, using some placeholder RichEmbed data with Markdown formatting. Also replies to the user to acknowledge receiving the command.

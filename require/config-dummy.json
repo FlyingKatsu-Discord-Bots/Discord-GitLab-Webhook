@@ -2,18 +2,18 @@
   
   "bot": {
     "name": "GitLab Webhook Bot",
-    "id": "",
-    "token": "",
-    "prefix": ">",
-    "debug_channel_id": ""
+    "id": "The 'Client ID' created at https://discordapp.com/developers/applications/me",
+    "token": "The 'Client Secret' created at https://discordapp.com/developers/applications/me",
+    "prefix": "> (or whatever prefix you prefer)",
+    "debug_channel_id": "Right-click > Copy ID in Discord [Dev Mode] of the channel you want to send error reports to. You MUST give the bot permission to send messages in this channel."
   },
   
   "webhook": {
-    "id": "000000000000000000",
-    "token": "",
+    "id": "{ID} FROM https://discordapp.com/api/webhooks/{ID}/{TOKEN} which is generated when you create a webhook in Discord",
+    "token": "{TOKEN} FROM https://discordapp.com/api/webhooks/{ID}/{TOKEN} (Use this for the Secret Token in GitLab)",
     "server": {
-      "address": "localhost",
-      "port": "8000"
+      "address": "localhost (or whatever address you give to GitLab in the URL box)",
+      "port": "8000 (the port number given to Gitlab in the URL box)"
     }
   }
 
