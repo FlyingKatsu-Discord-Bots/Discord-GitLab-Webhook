@@ -94,7 +94,7 @@ function handler (req, res) {
         
       } else {
         
-        console.log(req.headers);
+        //console.log(req.headers);
         
         // Is the first chunk, check the headers for validity
         if ( req.headers.hasOwnProperty('x-gitlab-token') ) {
@@ -161,7 +161,7 @@ function handler (req, res) {
         res.end();
         
         // Process Data
-        processData(type, data);
+        processData(type, JSON.parse(data));
       }
       console.log("==== DONE ====");
     });
