@@ -3,7 +3,7 @@
   "bot": {
     "name": "GitLab Webhook Bot",
     "id": "The 'Client ID' created at https://discordapp.com/developers/applications/me",
-    "token": "The 'Client Secret' created at https://discordapp.com/developers/applications/me",
+    "token": "The 'App Bot User Token' created at https://discordapp.com/developers/applications/me when you make a Bot User application",
     "prefix": "> (or whatever prefix you prefer)",
     "debug_channel_id": "Right-click > Copy ID in Discord [Dev Mode] of the channel you want to send error reports to. You MUST give the bot permission to send messages in this channel.",
     "master_user_id": "Right-click > Copy ID in Discord [Dev Mode] of the user that is allowed to disconnect this bot"
