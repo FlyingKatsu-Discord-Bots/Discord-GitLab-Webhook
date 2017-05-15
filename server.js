@@ -26,7 +26,7 @@ const BOT_SECRET = CONFIG.bot.token || process.env.DGW_BOT_TOKEN || "";
 var storedData = [];
 var userTimerEnabled = false;
 var disconnectHandled = false;
-var readyMsg = `${CONFIG.bot.name} is online and ready to receive data`;
+var readyMsg;
 
 /* ============================================
  * Timer to check if disconnected from Discord
@@ -39,7 +39,7 @@ var checkDisconnect = function() {
     // set disconnectHandled
     disconnectHandled = true;
     // set ready message to "Recovering from unexpected shutdown"
-    readyMsg = `${CONFIG.bot.name} has been restarted.  Any unprocessed data sent before this message will need to be resubmitted.`;
+    readyMsg = "rebooted";
     // try to login again (when ready, set interval again) 
     CLIENT.login(CONFIG.bot.token);
   }
@@ -812,34 +812,76 @@ const COMMANDS = {
  * Discord.JS Event Handlers
  * ========================================= */
 
+// Status alert message embeds
+const STATUS_EMBEDS = {
+  ready: {
+    color: ColorCodes.default,
+    author: {
+      name: HOOK.name,
+      icon_url: HOOK.avatar
+    },
+    title: "Bot Status Update",
+    description: `${CONFIG.bot.name} is online and ready to receive data`,
+    timestamp: new Date()
+  },
+  recovery: {
+    color: ColorCodes.default,
+    author: {
+      name: HOOK.name,
+      icon_url: HOOK.avatar
+    },
+    title: "Bot Status Update",
+    description: "Default text",
+    timestamp: new Date()
+  },
+  rebooted: {
+    color: ColorCodes.default,
+    author: {
+      name: HOOK.name,
+      icon_url: HOOK.avatar
+    },
+    title: "Bot Status Update",
+    description: `${CONFIG.bot.name} has been restarted.  Any unprocessed data sent before this message will need to be resubmitted.`,
+    timestamp: new Date()
+  },
+  listening: {
+    color: ColorCodes.default,
+    author: {
+      name: HOOK.name,
+      icon_url: HOOK.avatar
+    },
+    title: "Bot Status Update",
+    description: `Ready to listen for HTTP requests`,
+    timestamp: new Date()
+  }
+};
+
 // The ready event is vital, it means that your bot will only start reacting to information
 // from Discord _after_ ready is emitted
 CLIENT.on('ready', () => {
   console.log(`${CONFIG.bot.name} is ready to receive data`);
   
+  HOOK.send("", {embeds: [ STATUS_EMBEDS[readyMsg] ] })
+      .then( (message) => console.log(`Sent ready embed`))
+      .catch( shareDiscordError(null, `[onReady] Sending status embed [${readyMsg}] via WebHook: ${HOOK.name}`) );
+  
   if (disconnectHandled) {
     disconnectHandled = false;
-    HOOK.send(readyMsg)
-      .then( (message) => console.log(`Sent message: ${message.content}`))
-      .catch( shareDiscordError(null, `[onReady] Sending message [${readyMsg}] via WebHook: ${HOOK.name}`) );
     
     // Process stored data
     let numStored = storedData.length;
-    let collectedEmbeds = [];
+    let collectedEmbeds = [STATUS_EMBEDS.recovery];
     for (let i = 0; i < numStored; i++) {
       collectedEmbeds.push(storedData.pop());
     }
+    collectedEmbeds[0].description = `Recovered ${collectedEmbeds.length} requests...`;
     // Send all the collected Embeds at once
     // NOTE: There is a chance that a request gets added to collectedEmbeds during this process, and won't be shared until the next time the bot recovers
-    HOOK.send( `Recovered ${collectedEmbeds.length} requests...`, {embeds: collectedEmbeds} )
+    HOOK.send( "", {embeds: collectedEmbeds} )
       .then( (message) => console.log(`Sent stored embeds`))
       .catch( shareDiscordError(null, `[onReady] Sending recovered embeds via WebHook: ${HOOK.name}`) );
     
   } else {
-    
-    HOOK.send(readyMsg)
-      .then( (message) => console.log(`Sent message: ${message.content}`))
-      .catch( shareDiscordError(null, `[onReady] Sending message [${readyMsg}] via WebHook: ${HOOK.name}`) );
     
     if (!app.listening) {
       // Start listening for HTTP requests
@@ -849,9 +891,9 @@ CLIENT.on('ready', () => {
         () => { 
           console.log( "Ready to listen at ", app.address() );
           
-          HOOK.send("Ready to listen for HTTP requests")
-            .then( (message) => console.log(`Sent message: ${message.content}`))
-            .catch( shareDiscordError(null, `[onListen] Sending message [Ready to Listen] via WebHook: ${HOOK.name}`) );
+          HOOK.send("", { embeds: [ STATUS_EMBEDS.listening ] } )
+            .then( (message) => console.log(`Sent listening embed`))
+            .catch( shareDiscordError(null, `[onListen] Sending status [listening] via WebHook: ${HOOK.name}`) );
         });
     }
     
