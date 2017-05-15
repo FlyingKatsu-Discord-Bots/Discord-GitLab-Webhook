@@ -825,13 +825,15 @@ CLIENT.on('ready', () => {
     
     // Process stored data
     let numStored = storedData.length;
+    let collectedEmbeds = [];
     for (let i = 0; i < numStored; i++) {
-      let status = (i+1) + "/" + numStored;
-      let embed = storedData.pop();
-      HOOK.send( "Recovered data " + status, {embeds: [embed]} )
-        .then( (message) => console.log(`Send stored embed`))
-        .catch( shareDiscordError(null, `[onReady] Sending recovered embed [${status}] via WebHook: ${HOOK.name}`) );
+      collectedEmbeds.push(storedData.pop());
     }
+    // Send all the collected Embeds at once
+    // NOTE: There is a chance that a request gets added to collectedEmbeds during this process, and won't be shared until the next time the bot recovers
+    HOOK.send( `Recovered ${collectedEmbeds.length} requests...`, {embeds: collectedEmbeds} )
+      .then( (message) => console.log(`Sent stored embeds`))
+      .catch( shareDiscordError(null, `[onReady] Sending recovered embeds via WebHook: ${HOOK.name}`) );
     
   } else {
     
