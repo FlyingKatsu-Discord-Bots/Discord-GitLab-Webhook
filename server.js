@@ -26,7 +26,7 @@ const BOT_SECRET = CONFIG.bot.token || process.env.DGW_BOT_TOKEN || "";
 var storedData = [];
 var userTimerEnabled = false;
 var disconnectHandled = false;
-var readyMsg;
+var readyMsg = "ready";
 
 /* ============================================
  * Timer to check if disconnected from Discord
@@ -197,15 +197,18 @@ function handler (req, res) {
           // To accept everything as a string
           //data = JSON.parse(JSON.stringify(data));
           
-          // To read JSON as JSON and everything else as potential JSON
-          data = (headers['content-type'] == "application/json") ? data : JSON.parse(data);
+          // To read JSON as JSON and everything else as a string
+          //data = (headers['content-type'] == "application/json") ? JSON.parse(data) : ""+data;
+          
+          // Assume only JSON formatting, and let all else be caught as an error and read as a string
+          data = JSON.parse(data);
           
           processData(type, data);
           
         } catch (e) {
           console.log("Error Context: Data is not formatted as JSON");
           console.error(e);
-          processData("Known Error", { message: "Expected JSON, but received "+headers['content-type'], body: JSON.stringify(data) } );
+          processData("Known Error", { message: "Expected JSON, but received a possibly mislabeled "+headers['content-type'], body: JSON.stringify(data) } );
         }
       }
       console.log("==== DONE ====");
@@ -816,40 +819,24 @@ const COMMANDS = {
 const STATUS_EMBEDS = {
   ready: {
     color: ColorCodes.default,
-    author: {
-      name: HOOK.name,
-      icon_url: HOOK.avatar
-    },
     title: "Bot Status Update",
-    description: `${CONFIG.bot.name} is online and ready to receive data`,
+    description: `${CONFIG.bot.name} is now online and ready to process commands`,
     timestamp: new Date()
   },
   recovery: {
     color: ColorCodes.default,
-    author: {
-      name: HOOK.name,
-      icon_url: HOOK.avatar
-    },
     title: "Bot Status Update",
     description: "Default text",
     timestamp: new Date()
   },
   rebooted: {
     color: ColorCodes.default,
-    author: {
-      name: HOOK.name,
-      icon_url: HOOK.avatar
-    },
     title: "Bot Status Update",
     description: `${CONFIG.bot.name} has been restarted.  Any unprocessed data sent before this message will need to be resubmitted.`,
     timestamp: new Date()
   },
   listening: {
     color: ColorCodes.default,
-    author: {
-      name: HOOK.name,
-      icon_url: HOOK.avatar
-    },
     title: "Bot Status Update",
     description: `Ready to listen for HTTP requests`,
     timestamp: new Date()

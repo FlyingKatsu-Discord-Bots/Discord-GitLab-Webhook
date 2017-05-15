@@ -9,13 +9,14 @@ const querystring = require('querystring');
 const CONFIG = require('./require/config.json');
 const SECRET = CONFIG.webhook.token || process.env.DGW_WEBHOOK_TOKEN || "";
 
-const postDataJSON = querystring.stringify(
+const postDataJSON_QS = querystring.stringify(
   {
   msg: "Hello World!"
   }
 );
 const postDataTextJSON = `{ "words": "Hello Alternate Reality!" }`;
 const postDataText = "I am a string!";
+const postDataJSON = JSON.stringify({ msg: "Hello World!" });
 
 const options = function(type, data) {
   return {
@@ -83,3 +84,9 @@ let req6 = HTTP.request(options("image/png", postDataJSON), resHandler );
 req6.on('error', errHandler);
 req6.write(postDataJSON);
 req6.end();
+
+// A QueryString of an object
+let req7 = HTTP.request(options("application/json", postDataJSON_QS), resHandler );
+req7.on('error', errHandler);
+req7.write(postDataJSON_QS);
+req7.end();
