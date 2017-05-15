@@ -10,6 +10,8 @@
   },
   
   "webhook": {
+    "name": "WebHook",
+    "icon_url": "An image url",
     "id": "{ID} FROM https://discordapp.com/api/webhooks/{ID}/{TOKEN} which is generated when you create a webhook in Discord",
     "token": "{TOKEN} FROM https://discordapp.com/api/webhooks/{ID}/{TOKEN} (Use this for the Secret Token in GitLab)",
     "server": {

@@ -104,7 +104,7 @@ function handler (req, res) {
         
       } else {
         
-        console.log(req.headers);
+        //console.log(req.headers);
         
         // Is the first chunk, check the headers for validity
         if ( req.headers.hasOwnProperty('x-gitlab-token') ) {
@@ -192,7 +192,7 @@ function handler (req, res) {
         
         // Process Data
         try {
-          console.log(data);
+          //console.log(data);
           
           // To accept everything as a string
           //data = JSON.parse(JSON.stringify(data));
@@ -256,7 +256,11 @@ function processData(type, data) {
     PERMALINK: "",
     DESCRIPTION: "",
     FIELDS: [],
-    TIME: new Date()
+    TIME: new Date(),
+    FOOTER: { 
+        icon_url: CONFIG.webhook.icon_url,
+        text: CONFIG.webhook.name
+      }
   };
   
   try {
@@ -545,11 +549,16 @@ function sendData(input) {
     url: input.PERMALINK,
     description: input.DESCRIPTION,
     fields: input.FIELDS || {},
-    timestamp: input.TIME || new Date()
+    timestamp: input.TIME || new Date(),
+    footer: input.FOOTER || { 
+        icon_url: CONFIG.bot.icon_url,
+        text: CONFIG.bot.name
+      }
   };
   
   // Only send data if client is ready
-  if (CLIENT.status == 0) {
+  if (CLIENT.status == 0 && HOOK) {
+    
     HOOK.send("", {embeds: [embed]})
       .then( (message) => console.log(`Sent embed`))
       .catch( shareDiscordError(null, `[sendData] Sending an embed via WebHook: ${HOOK.name}`) );
@@ -821,25 +830,29 @@ const STATUS_EMBEDS = {
     color: ColorCodes.default,
     title: "Bot Status Update",
     description: `${CONFIG.bot.name} is now online and ready to process commands`,
-    timestamp: new Date()
+    timestamp: new Date(),
+    footer: { icon_url: CONFIG.bot.icon_url, text: CONFIG.bot.name }
   },
   recovery: {
     color: ColorCodes.default,
     title: "Bot Status Update",
     description: "Default text",
-    timestamp: new Date()
+    timestamp: new Date(),
+    footer: { icon_url: CONFIG.bot.icon_url, text: CONFIG.bot.name }
   },
   rebooted: {
     color: ColorCodes.default,
     title: "Bot Status Update",
     description: `${CONFIG.bot.name} has been restarted.  Any unprocessed data sent before this message will need to be resubmitted.`,
-    timestamp: new Date()
+    timestamp: new Date(),
+    footer: { icon_url: CONFIG.bot.icon_url, text: CONFIG.bot.name }
   },
   listening: {
     color: ColorCodes.default,
     title: "Bot Status Update",
     description: `Ready to listen for HTTP requests`,
-    timestamp: new Date()
+    timestamp: new Date(),
+    footer: { icon_url: CONFIG.bot.icon_url, text: CONFIG.bot.name }
   }
 };
 
