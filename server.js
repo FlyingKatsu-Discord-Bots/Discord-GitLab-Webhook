@@ -104,7 +104,7 @@ function handler (req, res) {
         
       } else {
         
-        //console.log(req.headers);
+        console.log(req.headers);
         
         // Is the first chunk, check the headers for validity
         if ( req.headers.hasOwnProperty('x-gitlab-token') ) {
@@ -654,11 +654,11 @@ const COMMANDS = {
   clear: function(msg, arg) {    
     // Get the number of messages (first arg)
     let num = (arg[0]) ? parseInt(arg[0]) : 0;
-    if ( isNaN(num) || num <= 2 || num >= 200 ) {
+    if ( isNaN(num) || num < 2 || num > 100 ) {
       // Inform the user that this number is invalid
-      msg.reply(`You must specify a number between 2 and 200, exclusive.`)
+      msg.reply(`You must specify a number between 2 and 100, inclusive.`)
         .then( (m) => {console.log(`Informed ${msg.author} that the num messages to delete was invalid`)} )
-        .catch( shareDiscordError(msg.author, `[CLEAR:${num}] Sending a reply [Argument Must Be in (2,200)] to ${msg.author} in ${msg.channel}`) );
+        .catch( shareDiscordError(msg.author, `[CLEAR:${num}] Sending a reply [Argument Must Be >= 2 AND <= 100] to ${msg.author} in ${msg.channel}`) );
       // End
       return;
     }
@@ -685,7 +685,7 @@ const COMMANDS = {
       .catch( shareDiscordError(msg.author, `[CLEAR] Fetching messages in channel ${channel}`) );    
     // Set the number of messages to no more than the size of the channel's message collection
     num = Math.min(num, total);
-    if (num <= 2) {
+    if (num < 2) {
       // Inform the user that there are not enough messages in the channel to bulk delete
       msg.reply(`The channel ${channel} only has ${total} messages. Needs at least 3 messages for bulk delete to work.`)
         .then( (m) => {console.log(`Informed ${msg.author} that the channel ${channel} had too few messages`)} )

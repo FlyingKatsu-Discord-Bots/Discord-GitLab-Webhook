@@ -118,7 +118,7 @@ cat sample/push.json | curl -i -v -X POST localhost:9000 -H "Content-Type: appli
 
 Deletes the specified number of messages from the mentioned channel.  Only messages from the most recent two weeks will be deleted, as specified by the DiscordAPI.  Both the bot and the user must have permission to "Manage Messages" for the specified channel.  Also replies to the user to acknowledge receiving the command.
 
-* NUM must be a number greater than 2 and less than 200
+* NUM must be a number greater than or equal to 2 and less than 100
 * #CHANNEL must be a valid text channel in your guild/server
 
 
