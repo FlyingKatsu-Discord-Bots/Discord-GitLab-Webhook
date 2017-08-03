@@ -275,10 +275,10 @@ function processData(type, data) {
         if (data.commits.length == 1) {
 
           output.TITLE = `[${data.project.path_with_namespace}] 1 new commmit`;
-          output.DESCRIPTION +=  `${data.commits[i].message}\n`;
-          output.DESCRIPTION +=  `${data.commits[i].modified.length} changes\n`;
-          output.DESCRIPTION +=  `${data.commits[i].added.length} additions\n`;
-          output.DESCRIPTION +=  `${data.commits[i].removed.length} deletions`;
+          output.DESCRIPTION +=  `${data.commits[0].message}\n`;
+          output.DESCRIPTION +=  `${data.commits[0].modified.length} changes\n`;
+          output.DESCRIPTION +=  `${data.commits[0].added.length} additions\n`;
+          output.DESCRIPTION +=  `${data.commits[0].removed.length} deletions`;
 
         } else {
 
@@ -320,7 +320,7 @@ function processData(type, data) {
             break;
         }
 
-        if (data.assignees.length > 0) {
+        if (data.assignees && data.assignees.length > 0) {
           let assignees = { name: "Assigned To:", value: "" };
           for(let i = 0; i < data.assignees.length; i++) {
             assignees.value += `${data.assignees[i].username} `;
@@ -328,7 +328,7 @@ function processData(type, data) {
           output.FIELDS.push(assignees);
         } 
 
-        if (data.labels.length > 0) {
+        if (data.labels && data.labels.length > 0) {
           let labels = { name: "Labeled As:", value: "" };
           for(let i = 0; i < data.labels.length; i++) {
             labels.value += `${data.labels[i].type} `;
@@ -338,9 +338,9 @@ function processData(type, data) {
         break;
 
       case "Note Hook":
-        output.USERNAME = data.user.username;
+        output.USERNAME = (data.user) ? data.user.username : "";
         output.AVATAR_URL = data.user.avatar_url;
-        output.DESCRIPTION =  `New comment by ${data.user.username}`;        
+        output.DESCRIPTION =  "";        
         output.PERMALINK = data.object_attributes.url;
         
         output.FIELDS.push({
