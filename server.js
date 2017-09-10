@@ -270,6 +270,7 @@ function processData(type, data) {
         output.COLOR = ColorCodes.commit;
         output.USERNAME = data.user_name;
         output.AVATAR_URL = data.user_avatar;
+	if (data.user_avatar.startsWith('/')) output.AVATAR_URL = CONFIG.guild.url + data.user_avatar; 
         output.PERMALINK = data.project.web_url;
 
         if (data.commits.length == 1) {
