@@ -27,6 +27,7 @@ var storedData = [];
 var userTimerEnabled = false;
 var disconnectHandled = false;
 var readyMsg = "ready";
+var IS_DEBUG_MODE = false;
 
 /* ============================================
  * Timer to check if disconnected from Discord
@@ -35,7 +36,7 @@ var readyMsg = "ready";
 var checkDisconnect = function() {
   //console.log("### Routine check client.status: " + CLIENT.status + "; uptime: " + CLIENT.uptime);
   // if connection is lost, 
-  if ( !userTimerEnabled && !disconnectHandled && CLIENT.status == 5 ) {
+  if (!userTimerEnabled && !disconnectHandled && CLIENT.status == 5) {
     // set disconnectHandled
     disconnectHandled = true;
     // set ready message to "Recovering from unexpected shutdown"
@@ -46,7 +47,7 @@ var checkDisconnect = function() {
 }
 
 // Set a timeout for 120000 or 2 minutes  OR 3000 for 3sec
-var interval_dc = setInterval( checkDisconnect, 3000 );
+var interval_dc = setInterval(checkDisconnect, 3000);
 
 /* ============================================
  * Set up Webhook stuff
@@ -66,11 +67,11 @@ const HOOK = new DISCORD.WebhookClient(CONFIG.webhook.id, CONFIG.webhook.token);
 var app = HTTP.createServer(handler);
 
 // Handler for receiving HTTP requests
-function handler (req, res) {
-  
+function handler(req, res) {
+
   // Assume it's all good at first...
   var statusCode = 200;
-  
+
   // Keep track of incoming data
   let data = '';
   let type = req.headers['content-type'];
@@ -81,7 +82,7 @@ function handler (req, res) {
   let method = req.method;
   let url = req.url;
   let body = "";
-  
+
   // Only do stuff if the request came via POST
   if (req.method == "POST") {
 
@@ -89,39 +90,39 @@ function handler (req, res) {
 
     // Data collection handler
     req.on('data', function(chunk) {
-      
+
       console.log("reading...");
       //data += chunk;
-      
-      
-      if ( passChecked === false ) { // this data is already determined to be invalid
+
+
+      if (passChecked === false) { // this data is already determined to be invalid
         console.log("Data was invalid, skipping...");
         return;
-        
-      } else if ( passChecked != null ) {
+
+      } else if (passChecked != null) {
         data += chunk;
         return;
-        
+
       } else {
-        
+
         //console.log(req.headers);
-        
+
         // Is the first chunk, check the headers for validity
-        if ( req.headers.hasOwnProperty('x-gitlab-token') ) {
-          
+        if (req.headers.hasOwnProperty('x-gitlab-token')) {
+
           // Compare tokens
           let a = Buffer.from(req.headers['x-gitlab-token']);
           let b = Buffer.from(SECRET);
-          let isValid = (SECRET != "") && (a.length - b.length) == 0 && CRYPTO.timingSafeEqual( a,b );
-          
+          let isValid = (SECRET != "") && (a.length - b.length) == 0 && CRYPTO.timingSafeEqual(a, b);
+
           if (!isValid) {
             // otherwise, do nothing
             console.log("Invalid");
             passChecked = false;
-            
+
             // send a Bad Request response
             statusCode = 400;
-            res.writeHead(statusCode, {'Content-Type': 'application/json'});
+            res.writeHead(statusCode, { 'Content-Type': 'application/json' });
             let responseBody = {
               headers: headers,
               method: method,
@@ -130,21 +131,21 @@ function handler (req, res) {
             };
             res.write(JSON.stringify(responseBody));
             res.end();
-            
+
             // stop receiving request data
-            req.destroy( new MyError( "Invalid token" ) );
+            req.destroy(new MyError("Invalid token"));
             console.log("==== DESTROYED ====");
             return;
-            
+
           } else {
             // do something
             passChecked = true;
             statusCode = 200;
-            
+
             // get the event type
             type = req.headers['x-gitlab-event'];
             console.log("event type is: ", type);
-            
+
             // increment data
             data += chunk;
           }
@@ -153,10 +154,10 @@ function handler (req, res) {
           // otherwise, do nothing
           console.log("Not from GitLab");
           passChecked = false;
-          
+
           // send a Bad Request response
           statusCode = 400;
-          res.writeHead(statusCode, {'Content-Type': 'application/json'});
+          res.writeHead(statusCode, { 'Content-Type': 'application/json' });
           let responseBody = {
             headers: headers,
             method: method,
@@ -165,9 +166,9 @@ function handler (req, res) {
           };
           res.write(JSON.stringify(responseBody));
           res.end();
-          
+
           // stop receiving request data
-          req.destroy( new MyError( "Not from GitLab" ) );
+          req.destroy(new MyError("Not from GitLab"));
           console.log("==== DESTROYED ====");
           return;
         }
@@ -178,8 +179,8 @@ function handler (req, res) {
     // Completion handler
     req.on('end', function() {
       console.log("finishing up...");
-      
-      if ( passChecked ) {
+
+      if (passChecked) {
         // Let the sender know we received things alright
         res.setHeader('Content-Type', 'application/json');
         let responseBody = {
@@ -188,34 +189,39 @@ function handler (req, res) {
           url: url,
           body: body
         };
-        res.end( JSON.stringify(responseBody) );
-        
+        res.end(JSON.stringify(responseBody));
+
         // Process Data
         try {
           //console.log(data);
-          
+          // Log the data for debugging
+          if (IS_DEBUG_MODE) {
+            let channel = CLIENT.channels.get(CONFIG.bot.debug_channel_id);
+            channel.sendCode('json', data, { split: { maxLength: 1500 } }).catch(console.error);
+          }
+
           // To accept everything as a string
           //data = JSON.parse(JSON.stringify(data));
-          
+
           // To read JSON as JSON and everything else as a string
           //data = (headers['content-type'] == "application/json") ? JSON.parse(data) : ""+data;
-          
+
           // Assume only JSON formatting, and let all else be caught as an error and read as a string
           data = JSON.parse(data);
-          
+
           processData(type, data);
-          
+
         } catch (e) {
           console.log("Error Context: Data is not formatted as JSON");
           console.error(e);
-          processData("Known Error", { message: "Expected JSON, but received a possibly mislabeled "+headers['content-type'], body: JSON.stringify(data) } );
+          processData("Known Error", { message: "Expected JSON, but received a possibly mislabeled " + headers['content-type'], body: JSON.stringify(data) });
         }
       }
       console.log("==== DONE ====");
     });
-    
+
     // Error Handler
-    req.on('error', function(e){
+    req.on('error', function(e) {
       console.log("Error Context: handling an HTTP request");
       console.error(e);
     });
@@ -223,7 +229,7 @@ function handler (req, res) {
   }
 
   // TODO: handle other HTTP request types
-  
+
 }
 
 // Colors corresponding to different events
@@ -247,7 +253,7 @@ const ColorCodes = {
  */
 function processData(type, data) {
   console.log("processing...");
-  
+
   let output = {
     COLOR: ColorCodes.default,
     TITLE: "",
@@ -257,57 +263,57 @@ function processData(type, data) {
     DESCRIPTION: "",
     FIELDS: [],
     TIME: new Date(),
-    FOOTER: { 
-        icon_url: CONFIG.webhook.icon_url,
-        text: CONFIG.webhook.name
-      }
+    FOOTER: {
+      icon_url: CONFIG.webhook.icon_url,
+      text: CONFIG.webhook.name
+    }
   };
-  
+
   try {
-    switch(type) {
+    switch (type) {
 
       case "Push Hook":
         output.COLOR = ColorCodes.commit;
         output.USERNAME = data.user_name;
         output.AVATAR_URL = data.user_avatar;
-	if (data.user_avatar.startsWith('/')) output.AVATAR_URL = CONFIG.guild.url + data.user_avatar; 
+        if (data.user_avatar.startsWith('/')) output.AVATAR_URL = CONFIG.guild.url + data.user_avatar;
         output.PERMALINK = data.project.web_url;
 
         if (data.commits.length == 1) {
 
           output.TITLE = `[${data.project.path_with_namespace}] 1 new commmit`;
-          output.DESCRIPTION +=  `${data.commits[0].message}\n`;
-          output.DESCRIPTION +=  `${data.commits[0].modified.length} changes\n`;
-          output.DESCRIPTION +=  `${data.commits[0].added.length} additions\n`;
-          output.DESCRIPTION +=  `${data.commits[0].removed.length} deletions`;
+          output.DESCRIPTION += `${data.commits[0].message}\n`;
+          output.DESCRIPTION += `${data.commits[0].modified.length} changes\n`;
+          output.DESCRIPTION += `${data.commits[0].added.length} additions\n`;
+          output.DESCRIPTION += `${data.commits[0].removed.length} deletions`;
 
         } else {
 
           output.TITLE = `[${data.project.path_with_namespace}] ${data.total_commits_count} new commits`;
 
-          for(let i = 0; i < Math.min(data.commits.length, 5); i++) {
+          for (let i = 0; i < Math.min(data.commits.length, 5); i++) {
             let changelog = `${data.commits[i].modified.length} changes; ${data.commits[i].added.length} additions; ${data.commits[i].removed.length} deletions`;
             output.DESCRIPTION += `[${data.commits[i].id.substring(0,8)}](${data.commits[i].url} "${changelog}") `;
             output.DESCRIPTION += `${data.commits[i].message.substring(0,32)}... - ${data.commits[i].author.name}`;
-            output.DESCRIPTION +=  `\n`;
+            output.DESCRIPTION += `\n`;
           }
-        }      
+        }
         break;
 
       case "Tag Push Hook":
         // TODO https://docs.gitlab.com/ce/user/project/integrations/webhooks.html#tag-events
         console.log("# Unhandled case! Tag Push Hook.");
-        output.DESCRIPTION =  "**Tag Push Hook** This feature is not yet implemented";
+        output.DESCRIPTION = "**Tag Push Hook** This feature is not yet implemented";
         break;
 
       case "Issue Hook":
         output.USERNAME = data.user.username;
         output.AVATAR_URL = data.user.avatar_url;
         output.PERMALINK = data.object_attributes.url;
-        output.DESCRIPTION =  data.object_attributes.description.substring(0,128);
+        output.DESCRIPTION = data.object_attributes.description.substring(0, 128);
 
-        switch( data.object_attributes.action ) {
-          case "open": 
+        switch (data.object_attributes.action) {
+          case "open":
             output.COLOR = ColorCodes.issue_opened;
             output.TITLE = `[${data.project.path_with_namespace}] Issue Opened: #${data.object_attributes.iid} ${data.object_attributes.title}`;
             break;
@@ -317,39 +323,39 @@ function processData(type, data) {
             break;
           default:
             output.COLOR = ColorCodes.issue_comment;
-            console.log("## Unhandled case for Issue Hook ", data.object_attributes.action );
+            console.log("## Unhandled case for Issue Hook ", data.object_attributes.action);
             break;
         }
 
         if (data.assignees && data.assignees.length > 0) {
           let assignees = { name: "Assigned To:", value: "" };
-          for(let i = 0; i < data.assignees.length; i++) {
+          for (let i = 0; i < data.assignees.length; i++) {
             assignees.value += `${data.assignees[i].username} `;
           }
           output.FIELDS.push(assignees);
-        } 
+        }
 
         if (data.labels && data.labels.length > 0) {
           let labels = { name: "Labeled As:", value: "" };
-          for(let i = 0; i < data.labels.length; i++) {
+          for (let i = 0; i < data.labels.length; i++) {
             labels.value += `${data.labels[i].type} `;
           }
           output.FIELDS.push(labels);
-        }      
+        }
         break;
 
       case "Note Hook":
         output.USERNAME = (data.user) ? data.user.username : "";
         output.AVATAR_URL = data.user.avatar_url;
-        output.DESCRIPTION =  "";        
+        output.DESCRIPTION = "";
         output.PERMALINK = data.object_attributes.url;
-        
+
         output.FIELDS.push({
           name: "Comment",
-          value: data.object_attributes.note.substring(0,128)
+          value: data.object_attributes.note.substring(0, 128)
         });
-        
-        switch( data.object_attributes.noteable_type ) {
+
+        switch (data.object_attributes.noteable_type) {
 
           case "commit":
           case "Commit":
@@ -385,7 +391,7 @@ function processData(type, data) {
             output.FIELDS.push({
               name: "Assigned To",
               value: data.merge_request.assignee.username
-            });     
+            });
             break;
 
           case "issue":
@@ -405,7 +411,7 @@ function processData(type, data) {
             break;
 
           default:
-            console.log("## Unhandled case for Note Hook ", data.object_attributes.noteable_type );
+            console.log("## Unhandled case for Note Hook ", data.object_attributes.noteable_type);
             break;
         }
 
@@ -415,10 +421,10 @@ function processData(type, data) {
         output.USERNAME = data.user.username;
         output.AVATAR_URL = data.user.avatar_url;
         output.PERMALINK = data.object_attributes.url;
-        output.DESCRIPTION =  data.object_attributes.description.substring(0,128);
+        output.DESCRIPTION = data.object_attributes.description.substring(0, 128);
 
-        switch( data.object_attributes.action ) {
-          case "open": 
+        switch (data.object_attributes.action) {
+          case "open":
             output.COLOR = ColorCodes.merge_request_opened;
             output.TITLE = `[${data.object_attributes.target.path_with_namespace}] Merge Request Opened: #${data.object_attributes.iid} ${data.object_attributes.title}`;
             break;
@@ -428,15 +434,15 @@ function processData(type, data) {
             break;
           default:
             output.COLOR = ColorCodes.merge_request_comment;
-            console.log("## Unhandled case for Merge Request Hook ", data.object_attributes.action );
+            console.log("## Unhandled case for Merge Request Hook ", data.object_attributes.action);
             break;
         }
-        
+
         output.FIELDS.push({
           name: "Source --> Target",
           value: `Merge [${data.object_attributes.source.path_with_namespace}: ${data.object_attributes.source_branch}](${data.object_attributes.source.web_url}) into [${data.object_attributes.target.path_with_namespace}: ${data.object_attributes.target_branch}](${data.object_attributes.target.web_url})`
         });
-        
+
         /*if (data.object_attributes.source) {
           output.FIELDS.push({
             name: "Source:",
@@ -450,7 +456,7 @@ function processData(type, data) {
             value: `[${data.object_attributes.target.path_with_namespace}: ${data.object_attributes.target_branch}](${data.object_attributes.target.web_url} "${data.object_attributes.target.name}")`
           });
         }*/
-        
+
         if (data.object_attributes.assignee) {
           output.FIELDS.push({
             name: "Assigned To",
@@ -463,83 +469,83 @@ function processData(type, data) {
         output.USERNAME = data.user.username;
         output.AVATAR_URL = data.user.avatar_url;
         output.PERMALINK = data.object_attributes.url;
-        output.DESCRIPTION =  data.object_attributes.message.substring(0,128);
+        output.DESCRIPTION = data.object_attributes.message.substring(0, 128);
 
         output.TITLE = `[${data.project.path_with_namespace}] Wiki Action: ${data.object_attributes.action}`;
 
         output.FIELDS.push({
-            name: "Title",
-            value: data.object_attributes.title
-          });
+          name: "Title",
+          value: data.object_attributes.title
+        });
 
         output.FIELDS.push({
-            name: "Content",
-            value: data.object_attributes.content.substring(0, Math.min(data.object_attributes.content.length, 128))
-          });
+          name: "Content",
+          value: data.object_attributes.content.substring(0, Math.min(data.object_attributes.content.length, 128))
+        });
 
         break;
 
       case "Pipeline Hook":
         // TODO https://docs.gitlab.com/ce/user/project/integrations/webhooks.html#pipeline-events
         console.log("# Unhandled case! Pipeline Hook.");
-        output.DESCRIPTION =  "**Pipeline Hook** This feature is not yet implemented";
+        output.DESCRIPTION = "**Pipeline Hook** This feature is not yet implemented";
         break;
 
       case "Build Hook":
         // TODO https://docs.gitlab.com/ce/user/project/integrations/webhooks.html#build-events
         console.log("# Unhandled case! Build Hook.");
-        output.DESCRIPTION =  "**Build Hook** This feature is not yet implemented";
+        output.DESCRIPTION = "**Build Hook** This feature is not yet implemented";
         break;
-      
+
       case "Fake Error":
         console.log("# Invoked a Fake Error response.");
         output.DESCRIPTION = data.fake.error;
         break;
-        
+
       case "Known Error":
         output.COLOR = ColorCodes.error;
         output.TITLE = "Error Processing HTTP Request";
         output.DESCRIPTION = data.message;
-        
+
         if (data.body) {
           output.FIELDS.push({
             name: "Received Data",
-            value: data.body.substring(0,128)
+            value: data.body.substring(0, 128)
           });
         }
-        
+
         break;
-        
+
       default:
         // TODO
         console.log("# Unhandled case! ", type);
         output.TITLE = `Type: ${type}`;
-        output.DESCRIPTION =  `This feature is not yet implemented`;
-        
+        output.DESCRIPTION = `This feature is not yet implemented`;
+
         output.FIELDS.push({
           name: "Received Data",
-          value: JSON.stringify(data).substring(0,128)
+          value: JSON.stringify(data).substring(0, 128)
         });
-        
+
         break;
     }
-  } catch(e) {
+  } catch (e) {
     console.log("Error Context: processing data of an HTTP request. Type: " + type);
     console.error(e);
-    
+
     output.COLOR = ColorCodes.error;
     output.TITLE = "Error Reading HTTP Request Data: " + type;
     output.DESCRIPTION = e.message;
   }
-    
+
   // Send data via webhook
   sendData(output);
 }
 
 function sendData(input) {
-  
+
   console.log("sending...");
-  
+
   let embed = {
     color: input.COLOR,
     author: {
@@ -551,18 +557,18 @@ function sendData(input) {
     description: input.DESCRIPTION,
     fields: input.FIELDS || {},
     timestamp: input.TIME || new Date(),
-    footer: input.FOOTER || { 
-        icon_url: CONFIG.bot.icon_url,
-        text: CONFIG.bot.name
-      }
+    footer: input.FOOTER || {
+      icon_url: CONFIG.bot.icon_url,
+      text: CONFIG.bot.name
+    }
   };
-  
+
   // Only send data if client is ready
   if (CLIENT.status == 0 && HOOK) {
-    
-    HOOK.send("", {embeds: [embed]})
-      .then( (message) => console.log(`Sent embed`))
-      .catch( shareDiscordError(null, `[sendData] Sending an embed via WebHook: ${HOOK.name}`) );
+
+    HOOK.send("", { embeds: [embed] })
+      .then((message) => console.log(`Sent embed`))
+      .catch(shareDiscordError(null, `[sendData] Sending an embed via WebHook: ${HOOK.name}`));
   } else {
     storedData.push(embed);
   }
@@ -586,14 +592,14 @@ MyError.prototype.constructor = MyError;
  * https://gitlab.com/gitlab-org/gitlab-ce/issues/18256
  */
 //function decrypt(headers) {
-  // Set up our secure token checking object
-  //const HMAC = CRYPTO.createHmac( 'sha256', process.env.GITLAB_TOKEN );
-  // Hash the data
-  //HMAC.update(headers['X-Gitlab-Token'], 'base64');
-  // Verify the hash
-  //console.log(hmac.digest('base64'));
-  //return CRYPTO.timingSafeEqual(hmac.digest('base64'), b);
-  //return false;
+// Set up our secure token checking object
+//const HMAC = CRYPTO.createHmac( 'sha256', process.env.GITLAB_TOKEN );
+// Hash the data
+//HMAC.update(headers['X-Gitlab-Token'], 'base64');
+// Verify the hash
+//console.log(hmac.digest('base64'));
+//return CRYPTO.timingSafeEqual(hmac.digest('base64'), b);
+//return false;
 //}
 
 
@@ -601,30 +607,30 @@ MyError.prototype.constructor = MyError;
  * Bot Commands
  * ========================================= */
 const SAMPLE = {
-  build: {type: "Build Hook", filename: "sample/build.json"},
-  issue: {type: "Issue Hook", filename: "sample/issue.json"},
-  merge: {type: "Merge Request Hook", filename: "sample/merge.json"},
-  merge_request: {type: "Merge Request Hook", filename: "sample/merge.json"},
-  commit_comment: {type: "Note Hook", filename: "sample/note-commit.json"},
-  issue_comment: {type: "Note Hook", filename: "sample/note-issue.json"},
-  merge_comment: {type: "Note Hook", filename: "sample/note-merge.json"},
-  snippet: {type: "Note Hook", filename: "sample/note-snippet.json"},
-  pipeline: {type: "Pipeline Hook", filename: "sample/pipeline.json"},
-  push: {type: "Push Hook", filename: "sample/push.json"},
-  tag: {type: "Tag Push Hook", filename: "sample/tag.json"},
-  wiki: {type: "Wiki Hook", filename: "sample/wiki.json"},
-  unrelated: {type: "Unrelated", filename: "sample/unrelated.json"},
-  fake_error: {type: "Fake Error", filename: "sample/unrelated.json"}
+  build: { type: "Build Hook", filename: "sample/build.json" },
+  issue: { type: "Issue Hook", filename: "sample/issue.json" },
+  merge: { type: "Merge Request Hook", filename: "sample/merge.json" },
+  merge_request: { type: "Merge Request Hook", filename: "sample/merge.json" },
+  commit_comment: { type: "Note Hook", filename: "sample/note-commit.json" },
+  issue_comment: { type: "Note Hook", filename: "sample/note-issue.json" },
+  merge_comment: { type: "Note Hook", filename: "sample/note-merge.json" },
+  snippet: { type: "Note Hook", filename: "sample/note-snippet.json" },
+  pipeline: { type: "Pipeline Hook", filename: "sample/pipeline.json" },
+  push: { type: "Push Hook", filename: "sample/push.json" },
+  tag: { type: "Tag Push Hook", filename: "sample/tag.json" },
+  wiki: { type: "Wiki Hook", filename: "sample/wiki.json" },
+  unrelated: { type: "Unrelated", filename: "sample/unrelated.json" },
+  fake_error: { type: "Fake Error", filename: "sample/unrelated.json" }
 };
 
 // Custom Error Handlers for DiscordAPI
 // Reply to the message with an error report
 function replyWithDiscordError(msg) {
   // Return a function so that we can simply replace console.error with replyWithDiscordError(msg)
-  return function (e) {
+  return function(e) {
     if (msg) {
       msg.reply(`encountered an error from DiscordAPI: ${e.message}`)
-        .then( (m) => {console.log(`Informed ${msg.author} of the API error: ${e.message}`)} )
+        .then((m) => { console.log(`Informed ${msg.author} of the API error: ${e.message}`) })
         .catch(console.error);
     }
     console.error(e);
@@ -634,17 +640,17 @@ function replyWithDiscordError(msg) {
 function shareDiscordError(user, context) {
   // Return a function so that we can simply replace console.error with shareDiscordError(user)
   let channel = CLIENT.channels.get(CONFIG.bot.debug_channel_id);
-  return function (e) {
+  return function(e) {
     console.log("Error Context: " + context);
     console.error(e);
     if (user && channel) {
       channel.send(`${user} encountered an error from DiscordAPI...\nContext: ${context}\nError: ${e.message}`)
-        .then( (m) => {console.log(`[Via Debug Channel] Informed ${user} of the API Error ${e.code} during ${context}`)} )
-        .catch( shareDiscordErrorFromSend(e, context, `[ERROR] Sending error message to ${user} in ${channel}`) );
+        .then((m) => { console.log(`[Via Debug Channel] Informed ${user} of the API Error ${e.code} during ${context}`) })
+        .catch(shareDiscordErrorFromSend(e, context, `[ERROR] Sending error message to ${user} in ${channel}`));
     } else if (channel) {
       channel.send(`Someone encountered an error from DiscordAPI...\nContext: ${context}\nError: ${e.message}`)
-        .then( (m) => {console.log(`[Via Debug Channel] Reported an API Error ${e.code} during ${context}`)} )
-        .catch( shareDiscordErrorFromSend(e, context, `[ERROR] Sending error message to ${channel}`) );
+        .then((m) => { console.log(`[Via Debug Channel] Reported an API Error ${e.code} during ${context}`) })
+        .catch(shareDiscordErrorFromSend(e, context, `[ERROR] Sending error message to ${channel}`));
     }
   }
 }
@@ -655,40 +661,59 @@ function shareDiscordErrorFromSend(originalError, originalContext, context) {
     console.error(e);
     if (HOOK) {
       HOOK.send(`[${CONFIG.bot.name}] encountered an error...\nInitial Context: ${originalContext}\nInitial Error: ${originalError.message}\nSubsequent Context: ${context}\nSubsequent Error: ${e.message}`)
-       .then( (m) => console.log(`Sent an error report via webhook`))
-       .catch(console.error);
+        .then((m) => console.log(`Sent an error report via webhook`))
+        .catch(console.error);
     }
-  }  
+  }
 }
 
 
 const COMMANDS = {
-  
-  clear: function(msg, arg) {    
+
+  debug: function(msg, arg) {
+    let setting = (arg[0]) ? arg[0] : null;
+    if (setting == null || setting.toLowerCase() == 'true') {
+      IS_DEBUG_MODE = true;
+      msg.reply(`Debug Mode Is ON`)
+        .then((m) => { console.log(`Informed ${msg.author} that debug mode is on`) })
+        .catch(shareDiscordError(msg.author, `[DEBUG:${setting}] Sending a reply [Debug Mode Is ON] to ${msg.author} in ${msg.channel}`));
+    } else if (setting.toLowerCase() == 'false') {
+      IS_DEBUG_MODE = false;
+      msg.reply(`Debug Mode Is OFF`)
+        .then((m) => { console.log(`Informed ${msg.author} that debug mode is off`) })
+        .catch(shareDiscordError(msg.author, `[DEBUG:${setting}] Sending a reply [Debug Mode Is OFF] to ${msg.author} in ${msg.channel}`))
+    } else {
+      msg.reply(``)
+        .then((m) => { console.log(`Informed ${msg.author} that debug argument was invalid`) })
+        .catch(shareDiscordError(msg.author, `[DEBUG:${setting}] Sending a reply [Argument Must Be True or False] to ${msg.author} in ${msg.channel}`));
+    }
+  },
+
+  clear: function(msg, arg) {
     // Get the number of messages (first arg)
     let num = (arg[0]) ? parseInt(arg[0]) : 0;
-    if ( isNaN(num) || num < 2 || num > 100 ) {
+    if (isNaN(num) || num < 2 || num > 100) {
       // Inform the user that this number is invalid
       msg.reply(`You must specify a number between 2 and 100, inclusive.`)
-        .then( (m) => {console.log(`Informed ${msg.author} that the num messages to delete was invalid`)} )
-        .catch( shareDiscordError(msg.author, `[CLEAR:${num}] Sending a reply [Argument Must Be >= 2 AND <= 100] to ${msg.author} in ${msg.channel}`) );
+        .then((m) => { console.log(`Informed ${msg.author} that the num messages to delete was invalid`) })
+        .catch(shareDiscordError(msg.author, `[CLEAR:${num}] Sending a reply [Argument Must Be >= 2 AND <= 100] to ${msg.author} in ${msg.channel}`));
       // End
       return;
     }
-    
+
     // Get the channel mentioned if it was mentioned, otherwise set to current channel
     let channel = (msg.mentions.channels.size > 0) ? msg.mentions.channels.first() : msg.channel;
-    if ( channel.type !== "text" ) {
+    if (channel.type !== "text") {
       // Inform the user that this channel is invalid
       msg.reply(`You must specify a text channel.`)
-        .then( (m) => {console.log(`Informed ${msg.author} that the channel ${channel} was an invalid type ${channel.type}`)} )
-        .catch( shareDiscordError(msg.author, `[CLEAR:${channel}] Sending a reply [Please Specify a TextChannel] to ${msg.author} in ${msg.channel}`) );
+        .then((m) => { console.log(`Informed ${msg.author} that the channel ${channel} was an invalid type ${channel.type}`) })
+        .catch(shareDiscordError(msg.author, `[CLEAR:${channel}] Sending a reply [Please Specify a TextChannel] to ${msg.author} in ${msg.channel}`));
       // End
       return;
     }
-    
+
     //console.log(channel.messages.size); // Only retrieves number of messages in cache (since bot started)
-    
+
     // TODO: Find a better way of pre-checking number of messages available, maybe recursively?
     /*let total = null;
     channel.fetchMessages() // Limited to 50 at a time, so do this 4 times to get 200
@@ -706,84 +731,84 @@ const COMMANDS = {
       // End
       return;
     }*/
-    
+
     // Check if author is allowed to manage messages (8192 or 0x2000) in specified channel
-    if ( channel.permissionsFor(msg.author).has(8192) ) {      
+    if (channel.permissionsFor(msg.author).has(8192)) {
       // Bulk Delete, auto-ignoring messages older than 2 weeks
-      channel.bulkDelete( num, true )
-        .then( (collection) => { 
+      channel.bulkDelete(num, true)
+        .then((collection) => {
           msg.reply(`Successfully deleted ${collection.size} recent messages (from within the past 2 weeks) in ${channel}`)
-            .then( (m) => console.log(`Confirmed success of bulk delete in channel ${channel}`) )
-            .catch( shareDiscordError(msg.author, `[CLEAR:${num},${channel}] Sending a reply [Success] to ${msg.author} in ${msg.channel}`) ) 
-        } )
-        .catch( shareDiscordError(msg.author, `[CLEAR:${num},${channel}] Using bulkDelete(${num}, filterOld=true) in ${channel}`) );
-      
+            .then((m) => console.log(`Confirmed success of bulk delete in channel ${channel}`))
+            .catch(shareDiscordError(msg.author, `[CLEAR:${num},${channel}] Sending a reply [Success] to ${msg.author} in ${msg.channel}`))
+        })
+        .catch(shareDiscordError(msg.author, `[CLEAR:${num},${channel}] Using bulkDelete(${num}, filterOld=true) in ${channel}`));
+
     } else {
       // Inform the user that they are not permitted
       msg.reply(`Sorry, but you are not permitted to manage messages in ${channel}`)
-        .then( (m) => {console.log(`Informed ${msg.author} that they do not have permission to manage messages in ${channel}`)} )
-        .catch( shareDiscordError(msg.author, `[CLEAR:${num},${channel}] Sending a reply [User Not Permitted] to ${msg.author} in ${msg.channel}`) );
+        .then((m) => { console.log(`Informed ${msg.author} that they do not have permission to manage messages in ${channel}`) })
+        .catch(shareDiscordError(msg.author, `[CLEAR:${num},${channel}] Sending a reply [User Not Permitted] to ${msg.author} in ${msg.channel}`));
     }
   },
-  
+
   embed: function(msg, arg) {
     let key = (arg[0]) ? arg[0] : "";
-    
-    if ( key != "" && SAMPLE.hasOwnProperty(key) ) {      
-      FS.readFile(SAMPLE[key].filename, 'utf8', function (err, data) {
+
+    if (key != "" && SAMPLE.hasOwnProperty(key)) {
+      FS.readFile(SAMPLE[key].filename, 'utf8', function(err, data) {
         if (err) {
           console.log("Error Context: Reading a file " + key);
           console.error(err);
           msg.reply(`There was a problem loading the sample data: ${key}`)
-            .catch( shareDiscordError(msg.author, `[EMBED:${key}] Sending a reply [Error Reading File] to ${msg.author} in ${msg.channel}`) );
+            .catch(shareDiscordError(msg.author, `[EMBED:${key}] Sending a reply [Error Reading File] to ${msg.author} in ${msg.channel}`));
         } else {
           msg.reply(`Sending a sample embed: ${arg}`)
-            .catch( shareDiscordError(msg.author, `[EMBED:${key}] Sending a reply [Success] to ${msg.author} in ${msg.channel}`) );
+            .catch(shareDiscordError(msg.author, `[EMBED:${key}] Sending a reply [Success] to ${msg.author} in ${msg.channel}`));
           processData(SAMPLE[key].type, JSON.parse(data));
-        }        
-      });      
+        }
+      });
     } else {
       msg.reply(`Not a recognized argument`)
-        .catch( shareDiscordError(msg.author, `[EMBED:null] Sending a reply [Invalid Argument] to ${msg.author} in ${msg.channel}`) );
-    }    
+        .catch(shareDiscordError(msg.author, `[EMBED:null] Sending a reply [Invalid Argument] to ${msg.author} in ${msg.channel}`));
+    }
   },
-  
+
   disconnect: function(msg, arg) {
     let time = (arg[0]) ? parseInt(arg[0]) : 5000;
-    time = ( isNaN(time) ) ? 5000 : time;
+    time = (isNaN(time)) ? 5000 : time;
     time = Math.min(Math.max(time, 5000), 3600000);
-    
+
     // Verify that this user is allowed to disconnect the bot
     if (msg.author.id == CONFIG.bot.master_user_id) {
       userTimerEnabled = true;
-      
+
       msg.reply(`Taking bot offline for ${time} ms.  Any commands will be ignored until after that time, but the server will still attempt to listen for HTTP requests.`)
-        .catch( shareDiscordError(msg.author, `[DISCONNECT:${time}] Sending a reply [Success] to ${msg.author} in ${msg.channel}`) );
-      
+        .catch(shareDiscordError(msg.author, `[DISCONNECT:${time}] Sending a reply [Success] to ${msg.author} in ${msg.channel}`));
+
       CLIENT.destroy()
-        .then( () => {
-          setTimeout( () => { 
+        .then(() => {
+          setTimeout(() => {
             userTimerEnabled = false;
             console.log("finished user-specified timeout");
-          }, time); 
-        } )
-        .catch( shareDiscordError(msg.author, `[DISCONNECT] Destroying the client session`) );
-      
+          }, time);
+        })
+        .catch(shareDiscordError(msg.author, `[DISCONNECT] Destroying the client session`));
+
     } else {
       msg.reply(`You're not allowed to disconnect the bot!`)
-        .catch( shareDiscordError(msg.author, `[DISCONNECT] Sending a reply [Not Permitted] to ${msg.author} in ${msg.channel}`) );
-    }    
+        .catch(shareDiscordError(msg.author, `[DISCONNECT] Sending a reply [Not Permitted] to ${msg.author} in ${msg.channel}`));
+    }
   },
-  
+
   ping: function(msg, arg) {
     msg.channel.send('pong')
-      .catch( shareDiscordError(msg.author, `[PING] Sending a message to ${msg.channel}`) );
+      .catch(shareDiscordError(msg.author, `[PING] Sending a message to ${msg.channel}`));
   },
-  
+
   test: function(msg, arg) {
     msg.reply('Sending a sample embed')
-      .catch( shareDiscordError(msg.author, `[TEST] Sending a reply to ${msg.author} in ${msg.channel}`) );
-    
+      .catch(shareDiscordError(msg.author, `[TEST] Sending a reply to ${msg.author} in ${msg.channel}`));
+
     let embed = {
       color: 3447003,
       author: {
@@ -793,8 +818,7 @@ const COMMANDS = {
       title: 'This is an embed',
       url: 'http://google.com',
       description: `[abcdef](http://google.com "A title") A commit message... -Warped2713`,
-      fields: [
-        {
+      fields: [{
           name: 'Fields',
           value: 'They can have different fields with small headlines.'
         },
@@ -814,11 +838,11 @@ const COMMANDS = {
       }
     };
 
-    HOOK.send("", {embeds: [embed]})
-      .then( (message) => console.log(`Sent test embed`))
-      .catch( shareDiscordError(msg.author, `[TEST] Sending a message via WebHook ${HOOK.name}`) );
+    HOOK.send("", { embeds: [embed] })
+      .then((message) => console.log(`Sent test embed`))
+      .catch(shareDiscordError(msg.author, `[TEST] Sending a message via WebHook ${HOOK.name}`));
   }
-  
+
 };
 
 /* ============================================
@@ -861,14 +885,14 @@ const STATUS_EMBEDS = {
 // from Discord _after_ ready is emitted
 CLIENT.on('ready', () => {
   console.log(`${CONFIG.bot.name} is ready to receive data`);
-  
-  HOOK.send("", {embeds: [ STATUS_EMBEDS[readyMsg] ] })
-      .then( (message) => console.log(`Sent ready embed`))
-      .catch( shareDiscordError(null, `[onReady] Sending status embed [${readyMsg}] via WebHook: ${HOOK.name}`) );
-  
+
+  HOOK.send("", { embeds: [STATUS_EMBEDS[readyMsg]] })
+    .then((message) => console.log(`Sent ready embed`))
+    .catch(shareDiscordError(null, `[onReady] Sending status embed [${readyMsg}] via WebHook: ${HOOK.name}`));
+
   if (disconnectHandled) {
     disconnectHandled = false;
-    
+
     // Process stored data
     let numStored = storedData.length;
     let collectedEmbeds = [STATUS_EMBEDS.recovery];
@@ -878,55 +902,55 @@ CLIENT.on('ready', () => {
     collectedEmbeds[0].description = `Recovered ${collectedEmbeds.length} requests...`;
     // Send all the collected Embeds at once
     // NOTE: There is a chance that a request gets added to collectedEmbeds during this process, and won't be shared until the next time the bot recovers
-    HOOK.send( "", {embeds: collectedEmbeds} )
-      .then( (message) => console.log(`Sent stored embeds`))
-      .catch( shareDiscordError(null, `[onReady] Sending recovered embeds via WebHook: ${HOOK.name}`) );
-    
+    HOOK.send("", { embeds: collectedEmbeds })
+      .then((message) => console.log(`Sent stored embeds`))
+      .catch(shareDiscordError(null, `[onReady] Sending recovered embeds via WebHook: ${HOOK.name}`));
+
   } else {
-    
+
     if (!app.listening) {
       // Start listening for HTTP requests
       app.listen(
-        CONFIG.webhook.server.port, 
+        CONFIG.webhook.server.port,
         CONFIG.webhook.server.address,
-        () => { 
-          console.log( "Ready to listen at ", app.address() );
-          
-          HOOK.send("", { embeds: [ STATUS_EMBEDS.listening ] } )
-            .then( (message) => console.log(`Sent listening embed`))
-            .catch( shareDiscordError(null, `[onListen] Sending status [listening] via WebHook: ${HOOK.name}`) );
+        () => {
+          console.log("Ready to listen at ", app.address());
+
+          HOOK.send("", { embeds: [STATUS_EMBEDS.listening] })
+            .then((message) => console.log(`Sent listening embed`))
+            .catch(shareDiscordError(null, `[onListen] Sending status [listening] via WebHook: ${HOOK.name}`));
         });
     }
-    
+
   }
-  
+
 });
 
 // Create an event listener for messages
 CLIENT.on('message', msg => {
   // Ignore messages from DMs, Gropu DMs, and Voice
-  if (msg.channel.type !== "text" ) return;
-  
+  if (msg.channel.type !== "text") return;
+
   // Only read message if it starts with command prefix
   if (msg.content.startsWith(CONFIG.bot.prefix)) {
-    
+
     // Parse cmd and args
     let [cmd, ...arg] = msg.content.substring(CONFIG.bot.prefix.length).toLowerCase().split(" ");
-    
+
     // Only process command if it is recognized
-    if ( COMMANDS.hasOwnProperty(cmd) ) {
+    if (COMMANDS.hasOwnProperty(cmd)) {
       COMMANDS[cmd](msg, arg);
     }
-    
-  }  
+
+  }
 });
 
 CLIENT.on('disconnect', closeEvent => {
   let d = new Date();
   console.log(d.toLocaleString());
-  
+
   if (closeEvent) {
-    console.log( CONFIG.bot.name + ' went offline with code ' + closeEvent.code + ": " + closeEvent.reason);
+    console.log(CONFIG.bot.name + ' went offline with code ' + closeEvent.code + ": " + closeEvent.reason);
     console.log("Exiting...");
   } else {
     console.log(`${CONFIG.bot.name} went offline with unknown code`);
