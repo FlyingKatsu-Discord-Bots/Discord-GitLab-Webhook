@@ -30,13 +30,22 @@ var readyMsg = "ready";
 var IS_DEBUG_MODE = false;
 
 /* ============================================
+ * Set up Webhook stuff
+ * ========================================= */
+
+// Create an instance of a Discord client
+const CLIENT = new DISCORD.Client();
+
+const HOOK = new DISCORD.WebhookClient(CONFIG.webhook.id, CONFIG.webhook.token);
+
+/* ============================================
  * Timer to check if disconnected from Discord
  * ========================================= */
 
 var checkDisconnect = function() {
   //console.log("### Routine check client.status: " + CLIENT.status + "; uptime: " + CLIENT.uptime);
   // if connection is lost, 
-  if (!userTimerEnabled && !disconnectHandled && CLIENT.status == 5) {
+  if (!userTimerEnabled && !disconnectHandled && CLIENT != null && CLIENT.status == 5) {
     // set disconnectHandled
     disconnectHandled = true;
     // set ready message to "Recovering from unexpected shutdown"
@@ -48,15 +57,6 @@ var checkDisconnect = function() {
 
 // Set a timeout for 120000 or 2 minutes  OR 3000 for 3sec
 var interval_dc = setInterval(checkDisconnect, 3000);
-
-/* ============================================
- * Set up Webhook stuff
- * ========================================= */
-
-// Create an instance of a Discord client
-const CLIENT = new DISCORD.Client();
-
-const HOOK = new DISCORD.WebhookClient(CONFIG.webhook.id, CONFIG.webhook.token);
 
 
 /* ============================================
@@ -564,7 +564,7 @@ function sendData(input) {
   };
 
   // Only send data if client is ready
-  if (CLIENT.status == 0 && HOOK) {
+  if (CLIENT != null && CLIENT.status == 0 && HOOK != null) {
 
     HOOK.send("", { embeds: [embed] })
       .then((message) => console.log(`Sent embed`))
