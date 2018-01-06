@@ -87,6 +87,12 @@ echo $DGW_WEBHOOK_TOKEN
 
 ## Sending Test HTTP Requests
 
+### Use GitLab's Tests
+
+In your GitLab instance (either on the web or on your own server), go to `Settings > Integrations` and find (or create) your webhook. Use the drop-down menu next to your webhook's details to test different event types.
+
+Note that some events will require additional setup on your GitLab instance, such as a `.gitlab-ci.yml` script for your Pipeline and Job events, and an initial wiki page for your wiki events.
+
 ### Run the client script
 
 To test HTTP Requests, you can modify and use the client script, `ex-client.js`:
@@ -111,6 +117,13 @@ cat sample/push.json | curl -i -v -X POST localhost:9000 -H "Content-Type: appli
 
 
 ## Bot Commands
+
+### Debug Mode
+
+`>debug` or `>debug false`
+
+Tell the bot whether or not to enter Debug mode. When in Debug mode, any incoming GitLab HTTP requests received by the bot's HTTP server will be printed to your `#debug-channel` in your Discord server. This can be helpful for figuring out why the data might not be properly displayed by the webhook's embed messages, but can also spam your channel if the data is very long. Only a master user is allowed to use this command.
+
 
 ### Clear (Bulk Delete) Messages
 
