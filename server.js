@@ -2,8 +2,8 @@
  * HTTP request handling based on
  * https://blog.kyletolle.com/using-node-js-to-inspect-webhook-calls/
  * Test it in a second client with cURL
- * curl -X POST localhost:9000 -H 'Content-Type: text/plain' -d '{"payload":"test"}'
- * cat sample/unrelated.json | curl -i -v -X POST localhost:9000 -H "Content-Type: text/plain" -H 'X-Gitlab-Token: TOKEN' -H 'X-Gitlab-Event: EVENT' --data-binary "@-"
+ * curl -X POST localhost:9000 -H 'Content-Type: text/plain' -d '{'payload':'test'}'
+ * cat sample/unrelated.json | curl -i -v -X POST localhost:9000 -H 'Content-Type: text/plain' -H 'X-Gitlab-Token: TOKEN' -H 'X-Gitlab-Event: EVENT' --data-binary '@-'
  */
 
 // Import FS for reading sample files
@@ -17,8 +17,8 @@ const DISCORD = require('discord.js');
 
 // Import CONFIG file
 const CONFIG = require('./require/config.json');
-const SECRET = CONFIG.webhook.token || process.env.DGW_WEBHOOK_TOKEN || "";
-const BOT_SECRET = CONFIG.bot.token || process.env.DGW_BOT_TOKEN || "";
+const SECRET = CONFIG.webhook.token || process.env.DGW_WEBHOOK_TOKEN || '';
+const BOT_SECRET = CONFIG.bot.token || process.env.DGW_BOT_TOKEN || '';
 
 /* ============================================
  * Set up states and timers
@@ -26,7 +26,7 @@ const BOT_SECRET = CONFIG.bot.token || process.env.DGW_BOT_TOKEN || "";
 var storedData = [];
 var userTimerEnabled = false;
 var disconnectHandled = false;
-var readyMsg = "ready";
+var readyMsg = 'ready';
 var IS_DEBUG_MODE = false;
 
 /* ============================================
@@ -43,17 +43,17 @@ const HOOK = new DISCORD.WebhookClient(CONFIG.webhook.id, CONFIG.webhook.token);
  * ========================================= */
 
 var checkDisconnect = function() {
-  //console.log("### Routine check client.status: " + CLIENT.status + "; uptime: " + CLIENT.uptime);
+  //console.log('### Routine check client.status: ' + CLIENT.status + '; uptime: ' + CLIENT.uptime);
   // if connection is lost, 
   if (!userTimerEnabled && !disconnectHandled && CLIENT != null && CLIENT.status == 5) {
     // set disconnectHandled
     disconnectHandled = true;
-    // set ready message to "Recovering from unexpected shutdown"
-    readyMsg = "rebooted";
+    // set ready message to 'Recovering from unexpected shutdown'
+    readyMsg = 'rebooted';
     // try to login again (when ready, set interval again) 
     CLIENT.login(CONFIG.bot.token);
   }
-}
+};
 
 // Set a timeout for 120000 or 2 minutes  OR 3000 for 3sec
 var interval_dc = setInterval(checkDisconnect, 3000);
@@ -81,22 +81,22 @@ function handler(req, res) {
   let headers = req.headers;
   let method = req.method;
   let url = req.url;
-  let body = "";
+  let body = '';
 
   // Only do stuff if the request came via POST
-  if (req.method == "POST") {
+  if (req.method == 'POST') {
 
-    console.log("---- Post Request Detected ----");
+    console.log('---- Post Request Detected ----');
 
     // Data collection handler
     req.on('data', function(chunk) {
 
-      console.log("reading...");
+      console.log('reading...');
       //data += chunk;
 
 
       if (passChecked === false) { // this data is already determined to be invalid
-        console.log("Data was invalid, skipping...");
+        console.log('Data was invalid, skipping...');
         return;
 
       } else if (passChecked != null) {
@@ -113,11 +113,11 @@ function handler(req, res) {
           // Compare tokens
           let a = Buffer.from(req.headers['x-gitlab-token']);
           let b = Buffer.from(SECRET);
-          let isValid = (SECRET != "") && (a.length - b.length) == 0 && CRYPTO.timingSafeEqual(a, b);
+          let isValid = (SECRET != '') && (a.length - b.length) == 0 && CRYPTO.timingSafeEqual(a, b);
 
           if (!isValid) {
             // otherwise, do nothing
-            console.log("Invalid");
+            console.log('Invalid');
             passChecked = false;
 
             // send a Bad Request response
@@ -133,8 +133,8 @@ function handler(req, res) {
             res.end();
 
             // stop receiving request data
-            req.destroy(new MyError("Invalid token"));
-            console.log("==== DESTROYED ====");
+            req.destroy(new MyError('Invalid token'));
+            console.log('==== DESTROYED ====');
             return;
 
           } else {
@@ -144,7 +144,7 @@ function handler(req, res) {
 
             // get the event type
             type = req.headers['x-gitlab-event'];
-            console.log("event type is: ", type);
+            console.log('event type is: ', type);
 
             // increment data
             data += chunk;
@@ -152,7 +152,7 @@ function handler(req, res) {
 
         } else { // No Gitlab header detected
           // otherwise, do nothing
-          console.log("Not from GitLab");
+          console.log('Not from GitLab');
           passChecked = false;
 
           // send a Bad Request response
@@ -168,8 +168,8 @@ function handler(req, res) {
           res.end();
 
           // stop receiving request data
-          req.destroy(new MyError("Not from GitLab"));
-          console.log("==== DESTROYED ====");
+          req.destroy(new MyError('Not from GitLab'));
+          console.log('==== DESTROYED ====');
           return;
         }
       }
@@ -178,7 +178,7 @@ function handler(req, res) {
 
     // Completion handler
     req.on('end', function() {
-      console.log("finishing up...");
+      console.log('finishing up...');
 
       if (passChecked) {
         // Let the sender know we received things alright
@@ -205,7 +205,7 @@ function handler(req, res) {
           //data = JSON.parse(JSON.stringify(data));
 
           // To read JSON as JSON and everything else as a string
-          //data = (headers['content-type'] == "application/json") ? JSON.parse(data) : ""+data;
+          //data = (headers['content-type'] == 'application/json') ? JSON.parse(data) : ''+data;
 
           // Assume only JSON formatting, and let all else be caught as an error and read as a string
           data = JSON.parse(data);
@@ -213,17 +213,17 @@ function handler(req, res) {
           processData(type, data);
 
         } catch (e) {
-          console.log("Error Context: Data is not formatted as JSON");
+          console.log('Error Context: Data is not formatted as JSON');
           console.error(e);
-          processData("Known Error", { message: "Expected JSON, but received a possibly mislabeled " + headers['content-type'], body: JSON.stringify(data) });
+          processData('Known Error', { message: 'Expected JSON, but received a possibly mislabeled ' + headers['content-type'], body: JSON.stringify(data) });
         }
       }
-      console.log("==== DONE ====");
+      console.log('==== DONE ====');
     });
 
     // Error Handler
     req.on('error', function(e) {
-      console.log("Error Context: handling an HTTP request");
+      console.log('Error Context: handling an HTTP request');
       console.error(e);
     });
 
@@ -253,15 +253,15 @@ const ColorCodes = {
  * 
  */
 function processData(type, data) {
-  console.log("processing...");
+  console.log('processing...');
 
   let output = {
     COLOR: ColorCodes.default,
-    TITLE: "",
-    USERNAME: "",
-    AVATAR_URL: "",
-    PERMALINK: "",
-    DESCRIPTION: "",
+    TITLE: '',
+    USERNAME: '',
+    AVATAR_URL: '',
+    PERMALINK: '',
+    DESCRIPTION: '',
     FIELDS: [],
     TIME: new Date(),
     FOOTER: {
@@ -273,7 +273,7 @@ function processData(type, data) {
   try {
     switch (type) {
 
-      case "Push Hook":
+      case 'Push Hook':
         output.COLOR = ColorCodes.commit;
         output.USERNAME = data.user_name;
         output.AVATAR_URL = data.user_avatar;
@@ -294,42 +294,42 @@ function processData(type, data) {
 
           for (let i = 0; i < Math.min(data.commits.length, 5); i++) {
             let changelog = `${data.commits[i].modified.length} changes; ${data.commits[i].added.length} additions; ${data.commits[i].removed.length} deletions`;
-            output.DESCRIPTION += `[${data.commits[i].id.substring(0,8)}](${data.commits[i].url} "${changelog}") `;
+            output.DESCRIPTION += `[${data.commits[i].id.substring(0,8)}](${data.commits[i].url} '${changelog}') `;
             output.DESCRIPTION += `${data.commits[i].message.substring(0,32)}... - ${data.commits[i].author.name}`;
             output.DESCRIPTION += `\n`;
           }
         }
         break;
 
-      case "Tag Push Hook":
+      case 'Tag Push Hook':
         // TODO https://docs.gitlab.com/ce/user/project/integrations/webhooks.html#tag-events
-        console.log("# Unhandled case! Tag Push Hook.");
-        output.DESCRIPTION = "**Tag Push Hook** This feature is not yet implemented";
+        console.log('# Unhandled case! Tag Push Hook.');
+        output.DESCRIPTION = '**Tag Push Hook** This feature is not yet implemented';
         break;
 
-      case "Issue Hook":
+      case 'Issue Hook':
         output.USERNAME = data.user.username;
         output.AVATAR_URL = data.user.avatar_url;
         output.PERMALINK = data.object_attributes.url;
         output.DESCRIPTION = data.object_attributes.description.substring(0, 128);
 
         switch (data.object_attributes.action) {
-          case "open":
+          case 'open':
             output.COLOR = ColorCodes.issue_opened;
             output.TITLE = `[${data.project.path_with_namespace}] Issue Opened: #${data.object_attributes.iid} ${data.object_attributes.title}`;
             break;
-          case "close":
+          case 'close':
             output.COLOR = ColorCodes.issue_closed;
             output.TITLE = `[${data.project.path_with_namespace}] Issue Closed: #${data.object_attributes.iid} ${data.object_attributes.title}`;
             break;
           default:
             output.COLOR = ColorCodes.issue_comment;
-            console.log("## Unhandled case for Issue Hook ", data.object_attributes.action);
+            console.log('## Unhandled case for Issue Hook ', data.object_attributes.action);
             break;
         }
 
         if (data.assignees && data.assignees.length > 0) {
-          let assignees = { name: "Assigned To:", value: "" };
+          let assignees = { name: 'Assigned To:', value: '' };
           for (let i = 0; i < data.assignees.length; i++) {
             assignees.value += `${data.assignees[i].username} `;
           }
@@ -337,7 +337,7 @@ function processData(type, data) {
         }
 
         if (data.labels && data.labels.length > 0) {
-          let labels = { name: "Labeled As:", value: "" };
+          let labels = { name: 'Labeled As:', value: '' };
           for (let i = 0; i < data.labels.length; i++) {
             labels.value += `${data.labels[i].type} `;
           }
@@ -345,128 +345,128 @@ function processData(type, data) {
         }
         break;
 
-      case "Note Hook":
-        output.USERNAME = (data.user) ? data.user.username : "";
+      case 'Note Hook':
+        output.USERNAME = (data.user) ? data.user.username : '';
         output.AVATAR_URL = data.user.avatar_url;
-        output.DESCRIPTION = "";
+        output.DESCRIPTION = '';
         output.PERMALINK = data.object_attributes.url;
 
         output.FIELDS.push({
-          name: "Comment",
+          name: 'Comment',
           value: data.object_attributes.note.substring(0, 128)
         });
 
         switch (data.object_attributes.noteable_type) {
 
-          case "commit":
-          case "Commit":
+          case 'commit':
+          case 'Commit':
             output.COLOR = ColorCodes.commit;
             output.TITLE = `[${data.project.path_with_namespace}] New Comment on Commit ${data.commit.id.substring(0,8)}`;
             output.FIELDS.push({
-              name: "Commit Message",
+              name: 'Commit Message',
               value: data.commit.message
             });
             output.FIELDS.push({
-              name: "Commit Author",
+              name: 'Commit Author',
               value: data.commit.author.name
             });
             output.FIELDS.push({
-              name: "Commit Timestamp",
+              name: 'Commit Timestamp',
               // Given Format: 2014-02-27T10:06:20+02:00
               value: Date.parse(data.commit.timestamp)
             });
             break;
 
-          case "merge_request":
-          case "MergeRequest":
+          case 'merge_request':
+          case 'MergeRequest':
             output.COLOR = ColorCodes.merge_request_comment;
             output.TITLE = `[${data.project.path_with_namespace}] New Comment on Merge Request #${data.merge_request.iid}`;
             output.FIELDS.push({
-              name: "Merge Request",
+              name: 'Merge Request',
               value: data.merge_request.title
             });
             output.FIELDS.push({
-              name: "Source --> Target",
+              name: 'Source --> Target',
               value: `Merge [${data.merge_request.source.path_with_namespace}: ${data.merge_request.source_branch}](${data.merge_request.source.web_url}) into [${data.merge_request.target.path_with_namespace}: ${data.merge_request.target_branch}](${data.merge_request.target.web_url})`
             });
             output.FIELDS.push({
-              name: "Assigned To",
+              name: 'Assigned To',
               value: data.merge_request.assignee.username
             });
             break;
 
-          case "issue":
-          case "Issue":
+          case 'issue':
+          case 'Issue':
             output.COLOR = ColorCodes.issue_comment;
             output.TITLE = `[${data.project.path_with_namespace}] New Comment on Issue #${data.issue.iid} ${data.issue.title}`;
             break;
 
-          case "snippet":
-          case "Snippet":
+          case 'snippet':
+          case 'Snippet':
             output.TITLE = `[${data.project.path_with_namespace}] New Comment on Code Snippet`;
 
             output.FIELDS.push({
-              name: "Snippet",
-              value: "Title: " + data.snippet.title + "\n```\n" + data.snippet.content + "\n```"
+              name: 'Snippet',
+              value: 'Title: ' + data.snippet.title + '\n```\n' + data.snippet.content + '\n```'
             });
             break;
 
           default:
-            console.log("## Unhandled case for Note Hook ", data.object_attributes.noteable_type);
+            console.log('## Unhandled case for Note Hook ', data.object_attributes.noteable_type);
             break;
         }
 
         break;
 
-      case "Merge Request Hook":
+      case 'Merge Request Hook':
         output.USERNAME = data.user.username;
         output.AVATAR_URL = data.user.avatar_url;
         output.PERMALINK = data.object_attributes.url;
         output.DESCRIPTION = data.object_attributes.description.substring(0, 128);
 
         switch (data.object_attributes.action) {
-          case "open":
+          case 'open':
             output.COLOR = ColorCodes.merge_request_opened;
             output.TITLE = `[${data.object_attributes.target.path_with_namespace}] Merge Request Opened: #${data.object_attributes.iid} ${data.object_attributes.title}`;
             break;
-          case "close":
+          case 'close':
             output.COLOR = ColorCodes.merge_request_closed;
             output.TITLE = `[${data.object_attributes.target.path_with_namespace}] Merge Request Closed: #${data.object_attributes.iid} ${data.object_attributes.title}`;
             break;
           default:
             output.COLOR = ColorCodes.merge_request_comment;
-            console.log("## Unhandled case for Merge Request Hook ", data.object_attributes.action);
+            console.log('## Unhandled case for Merge Request Hook ', data.object_attributes.action);
             break;
         }
 
         output.FIELDS.push({
-          name: "Source --> Target",
+          name: 'Source --> Target',
           value: `Merge [${data.object_attributes.source.path_with_namespace}: ${data.object_attributes.source_branch}](${data.object_attributes.source.web_url}) into [${data.object_attributes.target.path_with_namespace}: ${data.object_attributes.target_branch}](${data.object_attributes.target.web_url})`
         });
 
         /*if (data.object_attributes.source) {
           output.FIELDS.push({
-            name: "Source:",
-            value: `[${data.object_attributes.source.path_with_namespace}: ${data.object_attributes.source_branch}](${data.object_attributes.source.web_url} "${data.object_attributes.source.name}")`
+            name: 'Source:',
+            value: `[${data.object_attributes.source.path_with_namespace}: ${data.object_attributes.source_branch}](${data.object_attributes.source.web_url} '${data.object_attributes.source.name}')`
           });
         } 
 
         if (data.object_attributes.target) {
           output.FIELDS.push({
-            name: "Target:",
-            value: `[${data.object_attributes.target.path_with_namespace}: ${data.object_attributes.target_branch}](${data.object_attributes.target.web_url} "${data.object_attributes.target.name}")`
+            name: 'Target:',
+            value: `[${data.object_attributes.target.path_with_namespace}: ${data.object_attributes.target_branch}](${data.object_attributes.target.web_url} '${data.object_attributes.target.name}')`
           });
         }*/
 
         if (data.object_attributes.assignee) {
           output.FIELDS.push({
-            name: "Assigned To",
+            name: 'Assigned To',
             value: `${data.object_attributes.assignee.username}`
           });
         }
         break;
 
-      case "Wiki Page Hook":
+      case 'Wiki Page Hook':
         output.USERNAME = data.user.username;
         output.AVATAR_URL = data.user.avatar_url;
         output.PERMALINK = data.object_attributes.url;
@@ -475,42 +475,42 @@ function processData(type, data) {
         output.TITLE = `[${data.project.path_with_namespace}] Wiki Action: ${data.object_attributes.action}`;
 
         output.FIELDS.push({
-          name: "Title",
+          name: 'Title',
           value: data.object_attributes.title
         });
 
         output.FIELDS.push({
-          name: "Content",
+          name: 'Content',
           value: data.object_attributes.content.substring(0, Math.min(data.object_attributes.content.length, 128))
         });
 
         break;
 
-      case "Pipeline Hook":
+      case 'Pipeline Hook':
         // TODO https://docs.gitlab.com/ce/user/project/integrations/webhooks.html#pipeline-events
-        console.log("# Unhandled case! Pipeline Hook.");
-        output.DESCRIPTION = "**Pipeline Hook** This feature is not yet implemented";
+        console.log('# Unhandled case! Pipeline Hook.');
+        output.DESCRIPTION = '**Pipeline Hook** This feature is not yet implemented';
         break;
 
-      case "Build Hook":
+      case 'Build Hook':
         // TODO https://docs.gitlab.com/ce/user/project/integrations/webhooks.html#build-events
-        console.log("# Unhandled case! Build Hook.");
-        output.DESCRIPTION = "**Build Hook** This feature is not yet implemented";
+        console.log('# Unhandled case! Build Hook.');
+        output.DESCRIPTION = '**Build Hook** This feature is not yet implemented';
         break;
 
-      case "Fake Error":
-        console.log("# Invoked a Fake Error response.");
+      case 'Fake Error':
+        console.log('# Invoked a Fake Error response.');
         output.DESCRIPTION = data.fake.error;
         break;
 
-      case "Known Error":
+      case 'Known Error':
         output.COLOR = ColorCodes.error;
-        output.TITLE = "Error Processing HTTP Request";
+        output.TITLE = 'Error Processing HTTP Request';
         output.DESCRIPTION = data.message;
 
         if (data.body) {
           output.FIELDS.push({
-            name: "Received Data",
+            name: 'Received Data',
             value: data.body.substring(0, 128)
           });
         }
@@ -519,23 +519,23 @@ function processData(type, data) {
 
       default:
         // TODO
-        console.log("# Unhandled case! ", type);
+        console.log('# Unhandled case! ', type);
         output.TITLE = `Type: ${type}`;
         output.DESCRIPTION = `This feature is not yet implemented`;
 
         output.FIELDS.push({
-          name: "Received Data",
+          name: 'Received Data',
           value: JSON.stringify(data).substring(0, 128)
         });
 
         break;
     }
   } catch (e) {
-    console.log("Error Context: processing data of an HTTP request. Type: " + type);
+    console.log('Error Context: processing data of an HTTP request. Type: ' + type);
     console.error(e);
 
     output.COLOR = ColorCodes.error;
-    output.TITLE = "Error Reading HTTP Request Data: " + type;
+    output.TITLE = 'Error Reading HTTP Request Data: ' + type;
     output.DESCRIPTION = e.message;
   }
 
@@ -545,7 +545,7 @@ function processData(type, data) {
 
 function sendData(input) {
 
-  console.log("sending...");
+  console.log('sending...');
 
   let embed = {
     color: input.COLOR,
@@ -567,7 +567,7 @@ function sendData(input) {
   // Only send data if client is ready
   if (CLIENT != null && CLIENT.status == 0 && HOOK != null) {
 
-    HOOK.send("", { embeds: [embed] })
+    HOOK.send('', { embeds: [embed] })
       .then((message) => console.log(`Sent embed`))
       .catch(shareDiscordError(null, `[sendData] Sending an embed via WebHook: ${HOOK.name}`));
   } else {
@@ -608,20 +608,20 @@ MyError.prototype.constructor = MyError;
  * Bot Commands
  * ========================================= */
 const SAMPLE = {
-  build: { type: "Build Hook", filename: "sample/build.json" },
-  issue: { type: "Issue Hook", filename: "sample/issue.json" },
-  merge: { type: "Merge Request Hook", filename: "sample/merge.json" },
-  merge_request: { type: "Merge Request Hook", filename: "sample/merge.json" },
-  commit_comment: { type: "Note Hook", filename: "sample/note-commit.json" },
-  issue_comment: { type: "Note Hook", filename: "sample/note-issue.json" },
-  merge_comment: { type: "Note Hook", filename: "sample/note-merge.json" },
-  snippet: { type: "Note Hook", filename: "sample/note-snippet.json" },
-  pipeline: { type: "Pipeline Hook", filename: "sample/pipeline.json" },
-  push: { type: "Push Hook", filename: "sample/push.json" },
-  tag: { type: "Tag Push Hook", filename: "sample/tag.json" },
-  wiki: { type: "Wiki Hook", filename: "sample/wiki.json" },
-  unrelated: { type: "Unrelated", filename: "sample/unrelated.json" },
-  fake_error: { type: "Fake Error", filename: "sample/unrelated.json" }
+  build: { type: 'Build Hook', filename: 'sample/build.json' },
+  issue: { type: 'Issue Hook', filename: 'sample/issue.json' },
+  merge: { type: 'Merge Request Hook', filename: 'sample/merge.json' },
+  merge_request: { type: 'Merge Request Hook', filename: 'sample/merge.json' },
+  commit_comment: { type: 'Note Hook', filename: 'sample/note-commit.json' },
+  issue_comment: { type: 'Note Hook', filename: 'sample/note-issue.json' },
+  merge_comment: { type: 'Note Hook', filename: 'sample/note-merge.json' },
+  snippet: { type: 'Note Hook', filename: 'sample/note-snippet.json' },
+  pipeline: { type: 'Pipeline Hook', filename: 'sample/pipeline.json' },
+  push: { type: 'Push Hook', filename: 'sample/push.json' },
+  tag: { type: 'Tag Push Hook', filename: 'sample/tag.json' },
+  wiki: { type: 'Wiki Hook', filename: 'sample/wiki.json' },
+  unrelated: { type: 'Unrelated', filename: 'sample/unrelated.json' },
+  fake_error: { type: 'Fake Error', filename: 'sample/unrelated.json' }
 };
 
 // Custom Error Handlers for DiscordAPI
@@ -635,14 +635,14 @@ function replyWithDiscordError(msg) {
         .catch(console.error);
     }
     console.error(e);
-  }
+  };
 }
 // Mention User and send report to Debug Channel
 function shareDiscordError(user, context) {
   // Return a function so that we can simply replace console.error with shareDiscordError(user)
   let channel = CLIENT.channels.get(CONFIG.bot.debug_channel_id);
   return function(e) {
-    console.log("Error Context: " + context);
+    console.log('Error Context: ' + context);
     console.error(e);
     if (user && channel) {
       channel.send(`${user} encountered an error from DiscordAPI...\nContext: ${context}\nError: ${e.message}`)
@@ -658,7 +658,7 @@ function shareDiscordError(user, context) {
 // In case we cannot send messages, try going through the webhook
 function shareDiscordErrorFromSend(originalError, originalContext, context) {
   return function(e) {
-    console.log("Error Context: " + context);
+    console.log('Error Context: ' + context);
     console.error(e);
     if (HOOK) {
       HOOK.send(`[${CONFIG.bot.name}] encountered an error...\nInitial Context: ${originalContext}\nInitial Error: ${originalError.message}\nSubsequent Context: ${context}\nSubsequent Error: ${e.message}`)
@@ -706,7 +706,7 @@ const COMMANDS = {
 
     // Get the channel mentioned if it was mentioned, otherwise set to current channel
     let channel = (msg.mentions.channels.size > 0) ? msg.mentions.channels.first() : msg.channel;
-    if (channel.type !== "text") {
+    if (channel.type !== 'text') {
       // Inform the user that this channel is invalid
       msg.reply(`You must specify a text channel.`)
         .then((m) => { console.log(`Informed ${msg.author} that the channel ${channel} was an invalid type ${channel.type}`) })
@@ -755,12 +755,12 @@ const COMMANDS = {
   },
 
   embed: function(msg, arg) {
-    let key = (arg[0]) ? arg[0] : "";
+    let key = (arg[0]) ? arg[0] : '';
 
-    if (key != "" && SAMPLE.hasOwnProperty(key)) {
+    if (key != '' && SAMPLE.hasOwnProperty(key)) {
       FS.readFile(SAMPLE[key].filename, 'utf8', function(err, data) {
         if (err) {
-          console.log("Error Context: Reading a file " + key);
+          console.log('Error Context: Reading a file ' + key);
           console.error(err);
           msg.reply(`There was a problem loading the sample data: ${key}`)
             .catch(shareDiscordError(msg.author, `[EMBED:${key}] Sending a reply [Error Reading File] to ${msg.author} in ${msg.channel}`));
@@ -792,7 +792,7 @@ const COMMANDS = {
         .then(() => {
           setTimeout(() => {
             userTimerEnabled = false;
-            console.log("finished user-specified timeout");
+            console.log('finished user-specified timeout');
           }, time);
         })
         .catch(shareDiscordError(msg.author, `[DISCONNECT] Destroying the client session`));
@@ -820,7 +820,7 @@ const COMMANDS = {
       },
       title: 'This is an embed',
       url: 'http://google.com',
-      description: `[abcdef](http://google.com "A title") A commit message... -Warped2713`,
+      description: `[abcdef](http://google.com 'A title') A commit message... -Warped2713`,
       fields: [{
           name: 'Fields',
           value: 'They can have different fields with small headlines.'
@@ -841,7 +841,7 @@ const COMMANDS = {
       }
     };
 
-    HOOK.send("", { embeds: [embed] })
+    HOOK.send('', { embeds: [embed] })
       .then((message) => console.log(`Sent test embed`))
       .catch(shareDiscordError(msg.author, `[TEST] Sending a message via WebHook ${HOOK.name}`));
   }
@@ -856,28 +856,28 @@ const COMMANDS = {
 const STATUS_EMBEDS = {
   ready: {
     color: ColorCodes.default,
-    title: "Bot Status Update",
+    title: 'Bot Status Update',
     description: `${CONFIG.bot.name} is now online and ready to process commands`,
     timestamp: new Date(),
     footer: { icon_url: CONFIG.bot.icon_url, text: CONFIG.bot.name }
   },
   recovery: {
     color: ColorCodes.default,
-    title: "Bot Status Update",
-    description: "Default text",
+    title: 'Bot Status Update',
+    description: 'Default text',
     timestamp: new Date(),
     footer: { icon_url: CONFIG.bot.icon_url, text: CONFIG.bot.name }
   },
   rebooted: {
     color: ColorCodes.default,
-    title: "Bot Status Update",
+    title: 'Bot Status Update',
     description: `${CONFIG.bot.name} has been restarted.  Any unprocessed data sent before this message will need to be resubmitted.`,
     timestamp: new Date(),
     footer: { icon_url: CONFIG.bot.icon_url, text: CONFIG.bot.name }
   },
   listening: {
     color: ColorCodes.default,
-    title: "Bot Status Update",
+    title: 'Bot Status Update',
     description: `Ready to listen for HTTP requests`,
     timestamp: new Date(),
     footer: { icon_url: CONFIG.bot.icon_url, text: CONFIG.bot.name }
@@ -889,7 +889,7 @@ const STATUS_EMBEDS = {
 CLIENT.on('ready', () => {
   console.log(`${CONFIG.bot.name} is ready to receive data`);
 
-  HOOK.send("", { embeds: [STATUS_EMBEDS[readyMsg]] })
+  HOOK.send('', { embeds: [STATUS_EMBEDS[readyMsg]] })
     .then((message) => console.log(`Sent ready embed`))
     .catch(shareDiscordError(null, `[onReady] Sending status embed [${readyMsg}] via WebHook: ${HOOK.name}`));
 
@@ -905,7 +905,7 @@ CLIENT.on('ready', () => {
     collectedEmbeds[0].description = `Recovered ${collectedEmbeds.length} requests...`;
     // Send all the collected Embeds at once
     // NOTE: There is a chance that a request gets added to collectedEmbeds during this process, and won't be shared until the next time the bot recovers
-    HOOK.send("", { embeds: collectedEmbeds })
+    HOOK.send('', { embeds: collectedEmbeds })
       .then((message) => console.log(`Sent stored embeds`))
       .catch(shareDiscordError(null, `[onReady] Sending recovered embeds via WebHook: ${HOOK.name}`));
 
@@ -917,9 +917,9 @@ CLIENT.on('ready', () => {
         CONFIG.webhook.server.port,
         CONFIG.webhook.server.address,
         () => {
-          console.log("Ready to listen at ", app.address());
+          console.log('Ready to listen at ', app.address());
 
-          HOOK.send("", { embeds: [STATUS_EMBEDS.listening] })
+          HOOK.send('', { embeds: [STATUS_EMBEDS.listening] })
             .then((message) => console.log(`Sent listening embed`))
             .catch(shareDiscordError(null, `[onListen] Sending status [listening] via WebHook: ${HOOK.name}`));
         });
@@ -932,13 +932,13 @@ CLIENT.on('ready', () => {
 // Create an event listener for messages
 CLIENT.on('message', msg => {
   // Ignore messages from DMs, Gropu DMs, and Voice
-  if (msg.channel.type !== "text") return;
+  if (msg.channel.type !== 'text') return;
 
   // Only read message if it starts with command prefix
   if (msg.content.startsWith(CONFIG.bot.prefix)) {
 
     // Parse cmd and args
-    let [cmd, ...arg] = msg.content.substring(CONFIG.bot.prefix.length).toLowerCase().split(" ");
+    let [cmd, ...arg] = msg.content.substring(CONFIG.bot.prefix.length).toLowerCase().split(' ');
 
     // Only process command if it is recognized
     if (COMMANDS.hasOwnProperty(cmd)) {
@@ -953,8 +953,8 @@ CLIENT.on('disconnect', closeEvent => {
   console.log(d.toLocaleString());
 
   if (closeEvent) {
-    console.log(CONFIG.bot.name + ' went offline with code ' + closeEvent.code + ": " + closeEvent.reason);
-    console.log("Exiting...");
+    console.log(CONFIG.bot.name + ' went offline with code ' + closeEvent.code + ': ' + closeEvent.reason);
+    console.log('Exiting...');
   } else {
     console.log(`${CONFIG.bot.name} went offline with unknown code`);
   }
@@ -988,6 +988,6 @@ CLIENT.on('error', error => {
 /* ============================================
  * Log our bot into Discord
  * ========================================= */
-console.log("Logging in...");
+console.log('Logging in...');
 // Log our bot in
 CLIENT.login(BOT_SECRET);
