@@ -672,21 +672,23 @@ function shareDiscordErrorFromSend(originalError, originalContext, context) {
 const COMMANDS = {
 
   debug: function(msg, arg) {
-    let setting = (arg[0]) ? arg[0] : null;
-    if (setting == null || setting.toLowerCase() == 'true') {
-      IS_DEBUG_MODE = true;
-      msg.reply(`Debug Mode Is ON`)
-        .then((m) => { console.log(`Informed ${msg.author} that debug mode is on`) })
-        .catch(shareDiscordError(msg.author, `[DEBUG:${setting}] Sending a reply [Debug Mode Is ON] to ${msg.author} in ${msg.channel}`));
-    } else if (setting.toLowerCase() == 'false') {
-      IS_DEBUG_MODE = false;
-      msg.reply(`Debug Mode Is OFF`)
-        .then((m) => { console.log(`Informed ${msg.author} that debug mode is off`) })
-        .catch(shareDiscordError(msg.author, `[DEBUG:${setting}] Sending a reply [Debug Mode Is OFF] to ${msg.author} in ${msg.channel}`))
-    } else {
-      msg.reply(``)
-        .then((m) => { console.log(`Informed ${msg.author} that debug argument was invalid`) })
-        .catch(shareDiscordError(msg.author, `[DEBUG:${setting}] Sending a reply [Argument Must Be True or False] to ${msg.author} in ${msg.channel}`));
+    if (msg.author.id == CONFIG.bot.master_user_id) {
+      let setting = (arg[0]) ? arg[0] : null;
+      if (setting == null || setting.toLowerCase() == 'true') {
+        IS_DEBUG_MODE = true;
+        msg.reply(`Debug Mode Is ON`)
+          .then((m) => { console.log(`Informed ${msg.author} that debug mode is on`) })
+          .catch(shareDiscordError(msg.author, `[DEBUG:${setting}] Sending a reply [Debug Mode Is ON] to ${msg.author} in ${msg.channel}`));
+      } else if (setting.toLowerCase() == 'false') {
+        IS_DEBUG_MODE = false;
+        msg.reply(`Debug Mode Is OFF`)
+          .then((m) => { console.log(`Informed ${msg.author} that debug mode is off`) })
+          .catch(shareDiscordError(msg.author, `[DEBUG:${setting}] Sending a reply [Debug Mode Is OFF] to ${msg.author} in ${msg.channel}`))
+      } else {
+        msg.reply(`Not a valid argument. Please specify true or false to turn debug mode on or off.`)
+          .then((m) => { console.log(`Informed ${msg.author} that debug argument was invalid`) })
+          .catch(shareDiscordError(msg.author, `[DEBUG:${setting}] Sending a reply [Argument Must Be True or False] to ${msg.author} in ${msg.channel}`));
+      }
     }
   },
 
