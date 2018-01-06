@@ -198,7 +198,7 @@ function handler(req, res) {
           if (IS_DEBUG_MODE) {
             let channel = CLIENT.channels.get(CONFIG.bot.debug_channel_id);
             console.log(data);
-            channel.send(data, { code: 'json', split: { maxLength: 1500 } })
+            channel.send(data, { code: 'json', split: { maxLength: 1500, char: ',' } })
               .catch(console.error);
           }
 
