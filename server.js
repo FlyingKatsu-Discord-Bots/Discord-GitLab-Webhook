@@ -197,7 +197,7 @@ function handler(req, res) {
           // Log the data for debugging
           if (IS_DEBUG_MODE) {
             let channel = CLIENT.channels.get(CONFIG.bot.debug_channel_id);
-            channel.sendCode('json', data, { split: { maxLength: 1500 } }).catch(console.error);
+            channel.send(data, { code: 'json', split: { maxLength: 1500 } }).catch(console.error);
           }
 
           // To accept everything as a string
