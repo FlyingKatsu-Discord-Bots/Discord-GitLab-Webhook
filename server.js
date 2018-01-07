@@ -369,7 +369,7 @@ function processData(type, data) {
         if (data.labels && data.labels.length > 0) {
           let labels = { name: 'Labeled As:', value: '' };
           for (let i = 0; i < data.labels.length; i++) {
-            labels.value += `${data.labels[i].type} `;
+            labels.value += `${data.labels[i].title} `;
           }
           output.FIELDS.push(labels);
         }
@@ -493,6 +493,22 @@ function processData(type, data) {
             name: 'Assigned To',
             value: `${data.object_attributes.assignee.username}`
           });
+        }
+
+        if (data.assignees && data.assignees.length > 0) {
+          let assignees = { name: 'Assigned To:', value: '' };
+          for (let i = 0; i < data.assignees.length; i++) {
+            assignees.value += `${data.assignees[i].username} `;
+          }
+          output.FIELDS.push(assignees);
+        }
+
+        if (data.labels && data.labels.length > 0) {
+          let labels = { name: 'Labeled As:', value: '' };
+          for (let i = 0; i < data.labels.length; i++) {
+            labels.value += `${data.labels[i].title} `;
+          }
+          output.FIELDS.push(labels);
         }
         break;
 
