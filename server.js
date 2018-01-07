@@ -259,13 +259,15 @@ const StrLen = {
   field_value: 128,
   commit_id: 8,
   commit_msg: 32,
-  json: 256
+  json: 256,
+  snippet_code: 256
 };
 
 /**
  * Helper method for ensuring data string is of a certain length or less and not null
  */
-function truncate(str, count, noElipses) {
+function truncate(str, count, noElipses, noNewLines) {
+  if (noNewLines) str = str.split('\n').join(' ');
   if (!count && str) return str;
   if (count && str && noElipses) {
     return str.substring(0, count);
@@ -292,6 +294,17 @@ function getAvatarURL(str) {
  */
 function processData(type, data) {
   console.log('processing...');
+
+  dateOptions = { //https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/toLocaleString
+    hour12: true,
+    weekday: "short",
+    day: "numeric",
+    month: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "numeric",
+    timeZoneName: "short"
+  };
 
   let output = {
     COLOR: ColorCodes.default,
@@ -432,18 +445,19 @@ function processData(type, data) {
           case 'Commit':
             output.COLOR = ColorCodes.commit;
             output.TITLE = `[${data.project.path_with_namespace}] New Comment on Commit ${truncate(data.commit.id,StrLen.commit_id,true)}`;
+
+            let commit_info = `[${truncate(data.commit.id,StrLen.commit_id,true)}](${data.commit.url}) `;
+            commit_info += `${truncate(data.commit.message,StrLen.commit_msg, false, true)} - ${data.commit.author.name}`;
             output.FIELDS.push({
-              name: 'Commit Message',
-              value: truncate(data.commit.message, StrLen.field_value)
+              name: 'Commit',
+              value: commit_info
             });
-            output.FIELDS.push({
-              name: 'Commit Author',
-              value: truncate(data.commit.author.name)
-            });
+
+            let commit_date = new Date(data.commit.timestamp);
             output.FIELDS.push({
               name: 'Commit Timestamp',
               // Given Format: 2014-02-27T10:06:20+02:00
-              value: new Date(data.commit.timestamp)
+              value: commit_date.toLocaleString('UTC', dateOptions)
             });
             break;
 
@@ -451,24 +465,52 @@ function processData(type, data) {
           case 'MergeRequest':
             output.COLOR = ColorCodes.merge_request_comment;
             output.TITLE = `[${data.project.path_with_namespace}] New Comment on Merge Request #${data.merge_request.iid}`;
+
+            let last_commit_info = `[${truncate(data.merge_request.last_commit.id,StrLen.commit_id,true)}](${data.merge_request.last_commit.url}) `;
+            last_commit_info += `${truncate(data.merge_request.last_commit.message,StrLen.commit_msg, false, true)} - ${data.merge_request.last_commit.author.name}`;
             output.FIELDS.push({
-              name: 'Merge Request',
-              value: data.merge_request.title
+              name: 'Latest Commit',
+              value: last_commit_info
             });
-            output.FIELDS.push({
-              name: 'Source --> Target',
-              value: `Merge [${data.merge_request.source.path_with_namespace}: ${data.merge_request.source_branch}](${data.merge_request.source.web_url}) into [${data.merge_request.target.path_with_namespace}: ${data.merge_request.target_branch}](${data.merge_request.target.web_url})`
-            });
+
             output.FIELDS.push({
               name: 'Assigned To',
               value: truncate(data.merge_request.assignee.username)
             });
+
+            let mr_state = (data.merge_request.merge_state) ? ` [${data.merge_request.merge_state}]` : '';
+            output.FIELDS.push({
+              name: 'Merge Request',
+              value: `#${data.merge_request.iid} ${data.merge_request.title}${mr_state}`
+            });
+
+            let mr_date = new Date(data.merge_request.created_at);
+            output.FIELDS.push({
+              name: 'Merge Request Timestamp',
+              // Given Format: 2014-02-27T10:06:20+02:00
+              value: mr_date.toLocaleString('UTC', dateOptions)
+            });
+
             break;
 
           case 'issue':
           case 'Issue':
             output.COLOR = ColorCodes.issue_comment;
             output.TITLE = `[${data.project.path_with_namespace}] New Comment on Issue #${data.issue.iid} ${data.issue.title}`;
+
+            let issue_state = (data.issue.state) ? ` [${data.issue.state}]` : '';
+            output.FIELDS.push({
+              name: 'Issue',
+              value: `#${data.issue.iid} ${data.issue.title}${issue_state}`
+            });
+
+            let issue_date = new Date(data.issue.created_at);
+            output.FIELDS.push({
+              name: 'Issue Timestamp',
+              // Given Format: 2014-02-27T10:06:20+02:00
+              value: issue_date.toLocaleString('UTC', dateOptions)
+            });
+
             break;
 
           case 'snippet':
@@ -476,8 +518,26 @@ function processData(type, data) {
             output.TITLE = `[${data.project.path_with_namespace}] New Comment on Code Snippet`;
 
             output.FIELDS.push({
-              name: 'Snippet',
-              value: '**' + data.snippet.title + '**\n```\n' + truncate(data.snippet.content, StrLen.field_value) + '\n```'
+              name: 'Title',
+              value: truncate(data.snippet.title, StrLen.field_value)
+            });
+
+            output.FIELDS.push({
+              name: 'File Name',
+              value: truncate(data.snippet.file_name, StrLen.field_value)
+            });
+
+            let snip_filetype = data.snippet.file_name.substr(data.snippet.file_name.lastIndexOf('.') + 1);
+            output.FIELDS.push({
+              name: 'Code Snippet',
+              value: '```' + snip_filetype + '\n' + truncate(data.snippet.content, StrLen.snippet_code) + '\n```'
+            });
+
+            let snip_date = new Date(data.snippet.created_at);
+            output.FIELDS.push({
+              name: 'Snippet Timestamp',
+              // Given Format: 2014-02-27T10:06:20+02:00
+              value: snip_date.toLocaleString('UTC', dateOptions)
             });
             break;
 
