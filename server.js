@@ -265,14 +265,24 @@ const StrLen = {
 /**
  * Helper method for ensuring data string is of a certain length or less and not null
  */
-function truncate(str, count) {
+function truncate(str, count, noElipses) {
   if (!count && str) return str;
-  if (str && str.length > 0) {
+  if (count && str && noElipses) {
+    return str.substring(0, count);
+  } else if (str && str.length > 0) {
     if (str.length <= count) return str;
     return str.substring(0, count - 3) + '...';
   } else {
     return "";
   }
+}
+
+// Assumes str is a gravatar url or a relative url to an avatar image upload
+// NOTE: this may not be needed in the latest GitLab instances
+function getAvatarURL(str) {
+  if (str == null) return "";
+  if (str.startsWith('/')) return CONFIG.webhook.gitlab_url + str;
+  return str;
 }
 
 
@@ -298,21 +308,27 @@ function processData(type, data) {
     }
   };
 
+  // Set up common values, if they exist
+  if (data.user) {
+    output.USERNAME = truncate(data.user.username) || truncate(data.user.name);
+    output.AVATAR_URL = getAvatarURL(data.user.avatar_url);
+  } else {
+    output.USERNAME = truncate(data.user_username) || truncate(data.user_name);
+    output.AVATAR_URL = getAvatarURL(data.user_avatar);
+  }
+  if (data.project) output.PERMALINK = truncate(data.project.web_url);
+
   try {
     switch (type) {
 
       case 'Push Hook':
         output.COLOR = ColorCodes.commit;
-        output.USERNAME = data.user_name;
-        output.AVATAR_URL = data.user_avatar;
-        if (data.user_avatar.startsWith('/')) output.AVATAR_URL = CONFIG.webhook.gitlab_url + data.user_avatar;
-        output.PERMALINK = data.project.web_url;
 
         if (data.commits.length < 1) {
           debugData(JSON.stringify(data));
         } else if (data.commits.length == 1) {
 
-          output.TITLE = `[${data.project.path_with_namespace}] 1 new commmit`;
+          output.TITLE = `[${data.project.path_with_namespace}] 1 new commit`;
           output.DESCRIPTION += `${data.commits[0].message}\n`;
           output.DESCRIPTION += `${data.commits[0].modified.length} changes\n`;
           output.DESCRIPTION += `${data.commits[0].added.length} additions\n`;
@@ -324,7 +340,7 @@ function processData(type, data) {
 
           for (let i = 0; i < Math.min(data.commits.length, 5); i++) {
             let changelog = `${data.commits[i].modified.length} changes; ${data.commits[i].added.length} additions; ${data.commits[i].removed.length} deletions`;
-            output.DESCRIPTION += `[${truncate(data.commits[i].id,StrLen.commit_id)}](${data.commits[i].url} '${changelog}') `;
+            output.DESCRIPTION += `[${truncate(data.commits[i].id,StrLen.commit_id,true)}](${data.commits[i].url} '${changelog}') `;
             output.DESCRIPTION += `${truncate(data.commits[i].message,StrLen.commit_msg)} - ${data.commits[i].author.name}`;
             output.DESCRIPTION += `\n`;
           }
@@ -332,15 +348,41 @@ function processData(type, data) {
         break;
 
       case 'Tag Push Hook':
-        // TODO https://docs.gitlab.com/ce/user/project/integrations/webhooks.html#tag-events
-        console.log('# Unhandled case! Tag Push Hook.');
-        output.DESCRIPTION = '**Tag Push Hook** This feature is not yet implemented';
+        // Commit Stuff
+        if (data.commits.length < 1) {
+          debugData(JSON.stringify(data));
+        } else if (data.commits.length == 1) {
+          output.DESCRIPTION += `**1 new commit**`;
+          output.DESCRIPTION += `${data.commits[0].message}\n`;
+          output.DESCRIPTION += `${data.commits[0].modified.length} changes\n`;
+          output.DESCRIPTION += `${data.commits[0].added.length} additions\n`;
+          output.DESCRIPTION += `${data.commits[0].removed.length} deletions`;
+        } else {
+          output.DESCRIPTION += `**${data.total_commits_count} new commits**`;
+          for (let i = 0; i < Math.min(data.commits.length, 5); i++) {
+            let changelog = `${data.commits[i].modified.length} changes; ${data.commits[i].added.length} additions; ${data.commits[i].removed.length} deletions`;
+            output.DESCRIPTION += `[${truncate(data.commits[i].id,StrLen.commit_id,true)}](${data.commits[i].url} '${changelog}') `;
+            output.DESCRIPTION += `${truncate(data.commits[i].message,StrLen.commit_msg)} - ${data.commits[i].author.name}`;
+            output.DESCRIPTION += `\n`;
+          }
+        }
+
+        // Tag Stuff
+        output.TITLE = `[${data.project.path_with_namespace}] Tag ${data.ref.substring('refs/tags/'.length)}`
+        output.PERMALINK = `${data.project.web_url}${data.ref}`
+        output.FIELDS.push({
+          name: 'Previous Tagged Commit',
+          value: `[${truncate(data.before, StrLen.commit_id, true)}](${data.project.web_url}/commit/${data.before} 'Check the previous tagged commit')`
+        });
+        output.FIELDS.push({
+          name: 'Current Tagged Commit',
+          value: `[${truncate(data.after, StrLen.commit_id, true)}](${data.project.web_url}/commit/${data.after} 'Check the current tagged commit')`
+        });
+
         break;
 
       case 'Issue Hook':
-        output.USERNAME = data.user.username;
-        output.AVATAR_URL = data.user.avatar_url;
-        output.PERMALINK = data.object_attributes.url;
+        output.PERMALINK = truncate(data.object_attributes.url);
         output.DESCRIPTION = truncate(data.object_attributes.description, StrLen.description);
 
         switch (data.object_attributes.action) {
@@ -376,8 +418,6 @@ function processData(type, data) {
         break;
 
       case 'Note Hook':
-        output.USERNAME = (data.user) ? data.user.username : '';
-        output.AVATAR_URL = data.user.avatar_url;
         output.DESCRIPTION = '';
         output.PERMALINK = data.object_attributes.url;
 
@@ -391,19 +431,19 @@ function processData(type, data) {
           case 'commit':
           case 'Commit':
             output.COLOR = ColorCodes.commit;
-            output.TITLE = `[${data.project.path_with_namespace}] New Comment on Commit ${truncate(data.commit.id,StrLen.commit_id)}`;
+            output.TITLE = `[${data.project.path_with_namespace}] New Comment on Commit ${truncate(data.commit.id,StrLen.commit_id,true)}`;
             output.FIELDS.push({
               name: 'Commit Message',
-              value: data.commit.message
+              value: truncate(data.commit.message, StrLen.field_value)
             });
             output.FIELDS.push({
               name: 'Commit Author',
-              value: data.commit.author.name
+              value: truncate(data.commit.author.name)
             });
             output.FIELDS.push({
               name: 'Commit Timestamp',
               // Given Format: 2014-02-27T10:06:20+02:00
-              value: Date.parse(data.commit.timestamp)
+              value: new Date(data.commit.timestamp)
             });
             break;
 
@@ -421,7 +461,7 @@ function processData(type, data) {
             });
             output.FIELDS.push({
               name: 'Assigned To',
-              value: data.merge_request.assignee.username
+              value: truncate(data.merge_request.assignee.username)
             });
             break;
 
@@ -437,7 +477,7 @@ function processData(type, data) {
 
             output.FIELDS.push({
               name: 'Snippet',
-              value: 'Title: ' + data.snippet.title + '\n```\n' + data.snippet.content + '\n```'
+              value: '**' + data.snippet.title + '**\n```\n' + truncate(data.snippet.content, StrLen.field_value) + '\n```'
             });
             break;
 
@@ -449,8 +489,6 @@ function processData(type, data) {
         break;
 
       case 'Merge Request Hook':
-        output.USERNAME = data.user.username;
-        output.AVATAR_URL = data.user.avatar_url;
         output.PERMALINK = data.object_attributes.url;
         output.DESCRIPTION = truncate(data.object_attributes.description, StrLen.description);
 
@@ -470,8 +508,13 @@ function processData(type, data) {
         }
 
         output.FIELDS.push({
-          name: 'Source --> Target',
-          value: `Merge [${data.object_attributes.source.path_with_namespace}: ${data.object_attributes.source_branch}](${data.object_attributes.source.web_url}) into [${data.object_attributes.target.path_with_namespace}: ${data.object_attributes.target_branch}](${data.object_attributes.target.web_url})`
+          name: 'Merge From',
+          value: `[${data.object_attributes.source.path_with_namespace}: ${data.object_attributes.source_branch}](${data.object_attributes.source.web_url})`
+        });
+
+        output.FIELDS.push({
+          name: 'Merge Into',
+          value: `[${data.object_attributes.target.path_with_namespace}: ${data.object_attributes.target_branch}](${data.object_attributes.target.web_url})`
         });
 
         /*if (data.object_attributes.source) {
@@ -513,8 +556,6 @@ function processData(type, data) {
         break;
 
       case 'Wiki Page Hook':
-        output.USERNAME = data.user.username;
-        output.AVATAR_URL = data.user.avatar_url;
         output.PERMALINK = data.object_attributes.url;
         output.DESCRIPTION = truncate(data.object_attributes.message, StrLen.description);
 
@@ -544,6 +585,7 @@ function processData(type, data) {
         // TODO https://docs.gitlab.com/ce/user/project/integrations/webhooks.html#build-events
         console.log('# Unhandled case! Build Hook.');
         output.DESCRIPTION = '**Build Hook** This feature is not yet implemented';
+        // There is no provided username/avatar, just build and commit data
         break;
 
       case 'Confidential Issue Hook':
