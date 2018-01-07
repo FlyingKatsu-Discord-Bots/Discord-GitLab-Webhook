@@ -1,5 +1,5 @@
 {
-  
+
   "bot": {
     "name": "GitLab Webhook Bot",
     "id": "The 'Client ID' created at https://discordapp.com/developers/applications/me",
@@ -8,7 +8,7 @@
     "debug_channel_id": "Right-click > Copy ID in Discord [Dev Mode] of the channel you want to send error reports to. You MUST give the bot permission to send messages in this channel.",
     "master_user_id": "Right-click > Copy ID in Discord [Dev Mode] of the user that is allowed to disconnect this bot"
   },
-  
+
   "webhook": {
     "name": "WebHook",
     "icon_url": "An image url",
@@ -17,7 +17,8 @@
     "server": {
       "address": "localhost (or whatever address you give to GitLab in the URL box)",
       "port": "8000 (the port number given to Gitlab in the URL box)"
-    }
+    },
+    "gitlab_url": "https://gitlab.com"
   }
 
 }

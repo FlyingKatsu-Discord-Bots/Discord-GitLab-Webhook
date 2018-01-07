@@ -195,11 +195,7 @@ function handler(req, res) {
         try {
           //console.log(data);
           // Log the data for debugging
-          if (IS_DEBUG_MODE) {
-            let channel = CLIENT.channels.get(CONFIG.bot.debug_channel_id);
-            channel.send(data, { code: 'json', split: { maxLength: 1500, char: ',' } })
-              .catch(console.error);
-          }
+          debugData(data);
 
           // To accept everything as a string
           //data = JSON.parse(JSON.stringify(data));
@@ -233,6 +229,15 @@ function handler(req, res) {
 
 }
 
+// Debug Mode helper
+function debugData(data) {
+  if (IS_DEBUG_MODE) {
+    let channel = CLIENT.channels.get(CONFIG.bot.debug_channel_id);
+    channel.send(data, { code: 'json', split: { maxLength: 1500, char: ',' } })
+      .catch(console.error);
+  }
+}
+
 // Colors corresponding to different events
 const ColorCodes = {
   issue_opened: 15426592, // orange
@@ -246,6 +251,29 @@ const ColorCodes = {
   default: 5198940, // grey
   error: 16773120 // yellow
 };
+
+const StrLen = {
+  title: 128,
+  description: 128,
+  field_name: 128,
+  field_value: 128,
+  commit_id: 8,
+  commit_msg: 32,
+  json: 256
+};
+
+/**
+ * Helper method for ensuring data string is of a certain length or less and not null
+ */
+function truncate(str, count) {
+  if (!count && str) return str;
+  if (str && str.length > 0) {
+    if (str.length <= count) return str;
+    return str.substring(0, count - 3) + '...';
+  } else {
+    return "";
+  }
+}
 
 
 /* 
@@ -277,10 +305,12 @@ function processData(type, data) {
         output.COLOR = ColorCodes.commit;
         output.USERNAME = data.user_name;
         output.AVATAR_URL = data.user_avatar;
-        if (data.user_avatar.startsWith('/')) output.AVATAR_URL = CONFIG.guild.url + data.user_avatar;
+        if (data.user_avatar.startsWith('/')) output.AVATAR_URL = CONFIG.webhook.gitlab_url + data.user_avatar;
         output.PERMALINK = data.project.web_url;
 
-        if (data.commits.length == 1) {
+        if (data.commits.length < 1) {
+          debugData(JSON.stringify(data));
+        } else if (data.commits.length == 1) {
 
           output.TITLE = `[${data.project.path_with_namespace}] 1 new commmit`;
           output.DESCRIPTION += `${data.commits[0].message}\n`;
@@ -294,8 +324,8 @@ function processData(type, data) {
 
           for (let i = 0; i < Math.min(data.commits.length, 5); i++) {
             let changelog = `${data.commits[i].modified.length} changes; ${data.commits[i].added.length} additions; ${data.commits[i].removed.length} deletions`;
-            output.DESCRIPTION += `[${data.commits[i].id.substring(0,8)}](${data.commits[i].url} '${changelog}') `;
-            output.DESCRIPTION += `${data.commits[i].message.substring(0,32)}... - ${data.commits[i].author.name}`;
+            output.DESCRIPTION += `[${truncate(data.commits[i].id,StrLen.commit_id)}](${data.commits[i].url} '${changelog}') `;
+            output.DESCRIPTION += `${truncate(data.commits[i].message,StrLen.commit_msg)} - ${data.commits[i].author.name}`;
             output.DESCRIPTION += `\n`;
           }
         }
@@ -311,7 +341,7 @@ function processData(type, data) {
         output.USERNAME = data.user.username;
         output.AVATAR_URL = data.user.avatar_url;
         output.PERMALINK = data.object_attributes.url;
-        output.DESCRIPTION = data.object_attributes.description.substring(0, 128);
+        output.DESCRIPTION = truncate(data.object_attributes.description, StrLen.description);
 
         switch (data.object_attributes.action) {
           case 'open':
@@ -353,7 +383,7 @@ function processData(type, data) {
 
         output.FIELDS.push({
           name: 'Comment',
-          value: data.object_attributes.note.substring(0, 128)
+          value: truncate(data.object_attributes.note, StrLen.field_value)
         });
 
         switch (data.object_attributes.noteable_type) {
@@ -361,7 +391,7 @@ function processData(type, data) {
           case 'commit':
           case 'Commit':
             output.COLOR = ColorCodes.commit;
-            output.TITLE = `[${data.project.path_with_namespace}] New Comment on Commit ${data.commit.id.substring(0,8)}`;
+            output.TITLE = `[${data.project.path_with_namespace}] New Comment on Commit ${truncate(data.commit.id,StrLen.commit_id)}`;
             output.FIELDS.push({
               name: 'Commit Message',
               value: data.commit.message
@@ -422,7 +452,7 @@ function processData(type, data) {
         output.USERNAME = data.user.username;
         output.AVATAR_URL = data.user.avatar_url;
         output.PERMALINK = data.object_attributes.url;
-        output.DESCRIPTION = data.object_attributes.description.substring(0, 128);
+        output.DESCRIPTION = truncate(data.object_attributes.description, StrLen.description);
 
         switch (data.object_attributes.action) {
           case 'open':
@@ -470,20 +500,21 @@ function processData(type, data) {
         output.USERNAME = data.user.username;
         output.AVATAR_URL = data.user.avatar_url;
         output.PERMALINK = data.object_attributes.url;
-        output.DESCRIPTION = data.object_attributes.message.substring(0, 128);
+        output.DESCRIPTION = truncate(data.object_attributes.message, StrLen.description);
 
         output.TITLE = `[${data.project.path_with_namespace}] Wiki Action: ${data.object_attributes.action}`;
 
         output.FIELDS.push({
-          name: 'Title',
+          name: 'Page Title',
           value: data.object_attributes.title
         });
 
-        output.FIELDS.push({
-          name: 'Content',
-          value: data.object_attributes.content.substring(0, Math.min(data.object_attributes.content.length, 128))
-        });
-
+        if (data.object_attributes.content) {
+          output.FIELDS.push({
+            name: 'Page Content',
+            value: truncate(data.object_attributes.content, 128)
+          });
+        }
         break;
 
       case 'Pipeline Hook':
@@ -493,7 +524,13 @@ function processData(type, data) {
         break;
 
       case 'Build Hook':
+      case 'Job Hook':
         // TODO https://docs.gitlab.com/ce/user/project/integrations/webhooks.html#build-events
+        console.log('# Unhandled case! Build Hook.');
+        output.DESCRIPTION = '**Build Hook** This feature is not yet implemented';
+        break;
+
+      case 'Confidential Issue Hook':
         console.log('# Unhandled case! Build Hook.');
         output.DESCRIPTION = '**Build Hook** This feature is not yet implemented';
         break;
@@ -511,7 +548,7 @@ function processData(type, data) {
         if (data.body) {
           output.FIELDS.push({
             name: 'Received Data',
-            value: data.body.substring(0, 128)
+            value: truncate(data.body, StrLen.field_value)
           });
         }
 
@@ -525,7 +562,7 @@ function processData(type, data) {
 
         output.FIELDS.push({
           name: 'Received Data',
-          value: JSON.stringify(data).substring(0, 128)
+          value: truncate(JSON.stringify(data), StrLen.json)
         });
 
         break;
@@ -619,7 +656,7 @@ const SAMPLE = {
   pipeline: { type: 'Pipeline Hook', filename: 'sample/pipeline.json' },
   push: { type: 'Push Hook', filename: 'sample/push.json' },
   tag: { type: 'Tag Push Hook', filename: 'sample/tag.json' },
-  wiki: { type: 'Wiki Hook', filename: 'sample/wiki.json' },
+  wiki: { type: 'Wiki Page Hook', filename: 'sample/wiki.json' },
   unrelated: { type: 'Unrelated', filename: 'sample/unrelated.json' },
   fake_error: { type: 'Fake Error', filename: 'sample/unrelated.json' }
 };
