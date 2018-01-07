@@ -724,6 +724,12 @@ function shareDiscordErrorFromSend(originalError, originalContext, context) {
 
 const COMMANDS = {
 
+  status: function(msg, arg) {
+    HOOK.send('', { embeds: [getStatusEmbed('status')] })
+      .then((message) => console.log(`Sent status embed`))
+      .catch(shareDiscordError(null, `[STATUS] Sending status embed [status] via WebHook: ${HOOK.name}`));
+  },
+
   debug: function(msg, arg) {
     if (msg.author.id == CONFIG.bot.master_user_id) {
       let setting = (arg[0]) ? arg[0] : null;
@@ -907,6 +913,13 @@ const COMMANDS = {
 
 // Status alert message embeds
 const STATUS_EMBEDS = {
+  status: {
+    color: ColorCodes.default,
+    title: 'Bot Status Update',
+    description: "See getStatusEmbed",
+    timestamp: new Date(),
+    footer: { icon_url: CONFIG.bot.icon_url, text: CONFIG.bot.name }
+  },
   ready: {
     color: ColorCodes.default,
     title: 'Bot Status Update',
@@ -937,12 +950,33 @@ const STATUS_EMBEDS = {
   }
 };
 
+/**
+ * https://stackoverflow.com/a/9763769
+ * @param {*} s number or string representing numerical value in ms
+ * @returns {string} HH:MM:SS
+ */
+function msToTime(s) {
+  // Pad to 2 or 3 digits, default is 2
+  var pad = (n, z = 2) => ('00' + n).slice(-z);
+  return pad(s / 3.6e6 | 0) + 'H:' + pad((s % 3.6e6) / 6e4 | 0) + 'M:' + pad((s % 6e4) / 1000 | 0) + '.' + pad(s % 1000, 3) + 'S';
+}
+
+function getStatusEmbed(key) {
+  if (STATUS_EMBEDS[key]) {
+    STATUS_EMBEDS[key].timestamp = new Date();
+    if (key == "status") {
+      STATUS_EMBEDS[key].description = `${CONFIG.bot.name} has status code ${CLIENT.status} and uptime ${msToTime(CLIENT.uptime)}`;
+    }
+  }
+  return STATUS_EMBEDS[key];
+}
+
 // The ready event is vital, it means that your bot will only start reacting to information
 // from Discord _after_ ready is emitted
 CLIENT.on('ready', () => {
   console.log(`${CONFIG.bot.name} is ready to receive data`);
 
-  HOOK.send('', { embeds: [STATUS_EMBEDS[readyMsg]] })
+  HOOK.send('', { embeds: [getStatusEmbed(readyMsg)] })
     .then((message) => console.log(`Sent ready embed`))
     .catch(shareDiscordError(null, `[onReady] Sending status embed [${readyMsg}] via WebHook: ${HOOK.name}`));
 
@@ -951,7 +985,7 @@ CLIENT.on('ready', () => {
 
     // Process stored data
     let numStored = storedData.length;
-    let collectedEmbeds = [STATUS_EMBEDS.recovery];
+    let collectedEmbeds = [getStatusEmbed('recovery')];
     for (let i = 0; i < numStored; i++) {
       collectedEmbeds.push(storedData.pop());
     }
@@ -972,7 +1006,7 @@ CLIENT.on('ready', () => {
         () => {
           console.log('Ready to listen at ', app.address());
 
-          HOOK.send('', { embeds: [STATUS_EMBEDS.listening] })
+          HOOK.send('', { embeds: [getStatusEmbed('listening')] })
             .then((message) => console.log(`Sent listening embed`))
             .catch(shareDiscordError(null, `[onListen] Sending status [listening] via WebHook: ${HOOK.name}`));
         });
