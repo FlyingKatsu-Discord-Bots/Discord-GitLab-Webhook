@@ -17,6 +17,7 @@
   },
   "homepage": "https://github.com/Warped2713/Discord-GitLab-Webhook#readme",
   "dependencies": {
+    "dedent-js": "^1.0.1",
     "discord.js": "^11.2.1",
     "erlpack": "github:hammerandchisel/erlpack#master",
     "pm2": "^2.4.5"
