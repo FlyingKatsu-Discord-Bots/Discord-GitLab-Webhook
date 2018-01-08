@@ -14,6 +14,8 @@ const CRYPTO = require('crypto');
 const HTTP = require('http');
 // Import the discord.js module
 const DISCORD = require('discord.js');
+// Import DEDENT for nice template literal strings
+const DEDENT = require('dedent-js');
 
 // Import CONFIG file
 const CONFIG = require('./require/config.json');
@@ -249,7 +251,10 @@ const ColorCodes = {
   merge_request_closed: 2530048, // green
   merge_request_comment: 15749300, // pink
   default: 5198940, // grey
-  error: 16773120 // yellow
+  error: 16773120, // yellow
+  red: 12856621,
+  green: 2530048,
+  grey: 5198940
 };
 
 const StrLen = {
@@ -635,9 +640,67 @@ function processData(type, data) {
         break;
 
       case 'Pipeline Hook':
-        // TODO https://docs.gitlab.com/ce/user/project/integrations/webhooks.html#pipeline-events
-        console.log('# Unhandled case! Pipeline Hook.');
-        output.DESCRIPTION = '**Pipeline Hook** This feature is not yet implemented';
+        output.TITLE = `[${data.project.path_with_namespace}] Pipeline Status Change `;
+        output.DESCRIPTION = '';
+        let status_emote = '';
+
+        switch (data.object_attributes.status) {
+          case 'failed':
+            output.COLOR = ColorCodes.red;
+            status_emote = '❌ ';
+            break;
+          case 'created':
+          case 'success':
+            output.COLOR = ColorCodes.green;
+            status_emote = '✅ ';
+            break;
+          default:
+            output.COLOR = ColorCodes.grey;
+            break;
+        }
+
+        output.FIELDS.push({
+          name: 'Duration',
+          value: msToTime(truncate(data.object_attributes.duration * 1000))
+        });
+
+        let commit_info = `[${truncate(data.commit.id,StrLen.commit_id,true)}](${data.commit.url}) `;
+        commit_info += `${truncate(data.commit.message,StrLen.commit_msg, false, true)} - ${data.commit.author.name}`;
+        output.FIELDS.push({
+          name: 'Commit',
+          value: commit_info
+        });
+
+        if (data.builds && data.builds.length > 0) {
+          for (let i = 0; i < data.builds.length; i++) {
+            let dates = {
+              create: new Date(data.builds[i].created_at),
+              start: new Date(data.builds[i].started_at),
+              finish: new Date(data.builds[i].finished_at)
+            };
+            let emote = '';
+            if (data.builds[i].status == 'failed') emote = '❌';
+            if (data.builds[i].status == 'skipped') emote = '↪️';
+            if (data.builds[i].status == 'success' || data.builds[i].status == 'created') emote = '✅';
+
+            let build_link = `[${data.builds[i].id}](${data.project.web_url + '/-/jobs/' + data.builds[i].id})`;
+
+            let build_details = `*Skipped Build ID ${build_link}*`;
+
+            if (data.builds[i].status != 'skipped') {
+              build_details = DEDENT `
+              - **Build ID**: ${build_link}
+              - **User**: [${data.builds[i].user.username}](${CONFIG.webhook.gitlab_url}/${data.builds[i].user.username})
+              - **Created**: ${dates.create.toLocaleString('UTC',dateOptions)}
+              - **Started**: ${dates.start.toLocaleString('UTC',dateOptions)}
+              - **Finished**: ${dates.finish.toLocaleString('UTC',dateOptions)}`;
+            }
+            output.FIELDS.push({
+              name: `${emote} ${truncate(data.builds[i].stage)}: ${truncate(data.builds[i].name)}`,
+              value: build_details
+            });
+          }
+        }
         break;
 
       case 'Build Hook':
@@ -1060,7 +1123,7 @@ const STATUS_EMBEDS = {
 function msToTime(s) {
   // Pad to 2 or 3 digits, default is 2
   var pad = (n, z = 2) => ('00' + n).slice(-z);
-  return pad(s / 3.6e6 | 0) + 'H:' + pad((s % 3.6e6) / 6e4 | 0) + 'M:' + pad((s % 6e4) / 1000 | 0) + '.' + pad(s % 1000, 3) + 'S';
+  return pad(s / 3.6e6 | 0) + 'h:' + pad((s % 3.6e6) / 6e4 | 0) + 'm:' + pad((s % 6e4) / 1000 | 0) + '.' + pad(s % 1000, 3) + 's';
 }
 
 function getStatusEmbed(key) {
