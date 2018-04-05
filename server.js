@@ -406,41 +406,48 @@ function processData(type, data) {
 
         break;
 
-      case 'Issue Hook':
-        output.PERMALINK = truncate(data.object_attributes.url);
+	  case 'Issue Hook':
+	  case 'Confidential Issue Hook':
+		output.PERMALINK = truncate(data.object_attributes.url);
+		let action = 'Issue';
 
-        switch (data.object_attributes.action) {
-          case 'open':
-            output.COLOR = ColorCodes.issue_opened;
-            output.DESCRIPTION = `**Issue Opened: #${data.object_attributes.iid} ${data.object_attributes.title}**\n`;
-            break;
-          case 'close':
-            output.COLOR = ColorCodes.issue_closed;
-            output.DESCRIPTION = `**Issue Closed: #${data.object_attributes.iid} ${data.object_attributes.title}**\n`;
-            break;
-          default:
-            output.COLOR = ColorCodes.issue_comment;
-            console.log('## Unhandled case for Issue Hook ', data.object_attributes.action);
-            break;
-        }
+		switch (data.object_attributes.action) {
+			case 'open':
+				output.COLOR = ColorCodes.issue_opened;
+				action = 'Issue Opened:';
+				break;
+			case 'close':
+				output.COLOR = ColorCodes.issue_closed;
+				action = 'Issue Closed:';
+				break;
+			default:
+				output.COLOR = ColorCodes.issue_comment;
+				console.log('## Unhandled case for Issue Hook ', data.object_attributes.action);
+				break;
+		}
 
-        output.DESCRIPTION += truncate(data.object_attributes.description, StrLen.description);
+		if (data.object_attributes.confidential) { // TODO support multiple hooks for private and public updates
+			output.DESCRIPTION += `**${action} [CONFIDENTIAL]**\n`;
+		} else {
+			output.DESCRIPTION += `**${action} #${data.object_attributes.iid} ${data.object_attributes.title}**\n`;
+			output.DESCRIPTION += truncate(data.object_attributes.description, StrLen.description);
 
-        if (data.assignees && data.assignees.length > 0) {
-          let assignees = { inline: true, name: 'Assigned To:', value: '' };
-          for (let i = 0; i < data.assignees.length; i++) {
-            assignees.value += `${data.assignees[i].username}\n`;
-          }
-          output.FIELDS.push(assignees);
-        }
+			if (data.assignees && data.assignees.length > 0) {
+			let assignees = { inline: true, name: 'Assigned To:', value: '' };
+			for (let i = 0; i < data.assignees.length; i++) {
+				assignees.value += `${data.assignees[i].username}\n`;
+			}
+			output.FIELDS.push(assignees);
+			}
 
-        if (data.labels && data.labels.length > 0) {
-          let labels = { inline: true, name: 'Labeled As:', value: '' };
-          for (let i = 0; i < data.labels.length; i++) {
-            labels.value += `${data.labels[i].title}\n`;
-          }
-          output.FIELDS.push(labels);
-        }
+			if (data.labels && data.labels.length > 0) {
+			let labels = { inline: true, name: 'Labeled As:', value: '' };
+			for (let i = 0; i < data.labels.length; i++) {
+				labels.value += `${data.labels[i].title}\n`;
+			}
+			output.FIELDS.push(labels);
+			}
+		}
         break;
 
       case 'Note Hook':
@@ -784,11 +791,6 @@ function processData(type, data) {
           name: `${build_emote} ${truncate(data.build_stage)}: ${truncate(data.build_name)}`,
           value: build_details
         });
-        break;
-
-      case 'Confidential Issue Hook':
-        console.log('# Unhandled case! Confidential Issue Hook.');
-        output.DESCRIPTION = '**Confidential Issue Hook** This feature is not yet implemented';
         break;
 
       case 'Fake Error':

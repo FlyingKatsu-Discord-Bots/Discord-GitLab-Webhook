@@ -18,7 +18,8 @@
       "address": "localhost (or whatever address you give to GitLab in the URL box)",
       "port": "8000 (the port number given to Gitlab in the URL box)"
     },
-    "gitlab_url": "https://gitlab.com"
+    "gitlab_url": "https://gitlab.com",
+    "gitlab_access_token": "See https://docs.gitlab.com/ce/user/profile/personal_access_tokens.html"
   }
 
 }
