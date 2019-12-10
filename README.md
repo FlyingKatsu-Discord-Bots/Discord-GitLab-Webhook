@@ -1,4 +1,6 @@
-[![Discord Server](https://discordapp.com/api/guilds/310097366759768065/embed.png)](https://discord.gg/tZWqhWd)
+[![Discord Server](https://discordapp.com/api/guilds/310097366759768065/embed.png)]
+(https://discord.gg/tZWqhWd)
+[![Run on Repl.it](https://repl.it/badge/github/FlyingKatsu-Discord-Bots/Discord-GitLab-Webhook)](https://repl.it/github/FlyingKatsu-Discord-Bots/Discord-GitLab-Webhook)
 
 # Discord-GitLab Webhook Bot
 
