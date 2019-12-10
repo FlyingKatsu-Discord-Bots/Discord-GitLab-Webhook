@@ -1,0 +1,2 @@
+language = "nodejs"
+run = "test -f require/config.json || cp require/config-dummy.json require/config.json; node server.js"
